@@ -138,6 +138,10 @@
             font-size: 18px;
             margin-bottom: 10px;
         }
+        /* Ensure overlay is hidden by default */
+        .overlay.hidden {
+            display: none;
+        }
         /* Animation definitions */
         @keyframes fadeOut {
             from { opacity: 1; }
@@ -171,7 +175,7 @@
         <!-- Page title -->
         <h1 class="text-center mb-4">CQMT RANDOM SAMPLES</h1>
         <div class="row">
-            <!-- Rater Name input card -->
+            <!-- Rater Name input card (always enabled) -->
             <div class="col-md-4">
                 <div class="card-3d card-enabled" id="rater-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Select a rater">
                     <label for="rater-name" class="form-label">Rater Name</label>
@@ -204,7 +208,7 @@
                 <button id="submit-btn" class="btn btn-primary btn-submit">Submit</button>
             </div>
         </div>
-        <!-- Progress overlay for submission -->
+        <!-- Progress overlay (hidden by default) -->
         <div id="overlay" class="overlay hidden">
             <div class="progress-text">Submitting... <span id="progress-percent">0%</span></div>
             <div id="progress-bar" class="progress-bar"></div>
@@ -408,21 +412,6 @@
                             $loadDate.prop('disabled', true);
                             $('#date-card').removeClass('card-enabled').addClass('card-disabled');
                         }
-
-                        // Update dropdown to hide selected agents
-                        const availableAgents = [...new Set(
-                            dummyData.filter(d => 
-                                d.rater === selectedRater &&
-                                ($loadDate.val() ? $loadDate.val().split(', ').includes(d.date) : true)
-                            ).map(d => d.agent)
-                        )].sort().filter(agent => !selected.includes(agent));
-                        $agentName.select2({
-                            data: [{ id: 'all', text: 'All', selected: selected.length === 0 }].concat(
-                                availableAgents.map(agent => ({ id: agent, text: agent }))
-                            ),
-                            width: '100%'
-                        });
-                        $agentName.val(selected).trigger('change');
                     } catch (e) {
                         console.error('Error in agent select handler:', e);
                     }
@@ -439,19 +428,24 @@
                         console.log('Agent unselected:', selected);
 
                         const selectedRater = $raterName.val();
-                        const availableAgents = [...new Set(
-                            dummyData.filter(d => 
-                                d.rater === selectedRater &&
-                                ($loadDate.val() ? $loadDate.val().split(', ').includes(d.date) : true)
-                            ).map(d => d.agent)
-                        )].sort().filter(agent => !selected.includes(agent));
-                        $agentName.select2({
-                            data: [{ id: 'all', text: 'All', selected: selected.length === 0 }].concat(
-                                availableAgents.map(agent => ({ id: agent, text: agent }))
-                            ),
-                            width: '100%'
-                        });
-                        $agentName.val(selected.length === 0 ? ['all'] : selected).trigger('change');
+                        // Update Agent Name dropdown
+                        if (selectedRater) {
+                            $.post('/get_agents', { rater_name: selectedRater }, function (data) {
+                                const availableAgents = data.filter(agent => !selected.includes(agent) || agent === 'all');
+                                $agentName.empty();
+                                availableAgents.forEach(agent => {
+                                    $agentName.append(new Option(agent, agent, agent === 'all' && selected.length === 0, agent === 'all' && selected.length === 0));
+                                });
+                                $agentName.val(selected.length === 0 ? ['all'] : selected).trigger('change');
+                            }).fail(function () {
+                                console.error('Failed to fetch agents');
+                            });
+                        } else {
+                            $agentName.select2({
+                                data: [{ id: 'all', text: 'All', selected: true }],
+                                width: '100%'
+                            });
+                        }
 
                         // Disable Load Date if no agents selected
                         if (!selected.length || selected.includes('all')) {
@@ -470,11 +464,13 @@
                         const $raterName = $('#rater-name');
                         const $loadDate = $('#load-date');
                         const $agentName = $('#agent-name');
-                        if ($raterName.length && $loadDate.length && $agentName.length) {
+                        const $overlay = $('#overlay');
+                        if ($raterName.length && $loadDate.length && $agentName.length && $overlay.length) {
                             // Apply explode animation
                             $raterName.addClass('fade-out explode');
                             $loadDate.addClass('fade-out explode');
                             $agentName.addClass('fade-out explode');
+                            $overlay.addClass('hidden'); // Ensure overlay is hidden
                             setTimeout(() => {
                                 // Reset inputs
                                 $raterName.val('').trigger('change');
@@ -527,7 +523,7 @@
                                 alert('Please select a rater.');
                                 return;
                             }
-                            // Apply pulse animation
+                            // Apply pulse animation and show overlay
                             $raterName.addClass('pulse');
                             $loadDate.addClass('pulse');
                             $agentName.addClass('pulse');
