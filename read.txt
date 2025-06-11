@@ -619,3 +619,296 @@
     </script>
 </body>
 </html>
+
+
+
+# Import required libraries for Flask, database, and CSV handling
+import pymssql
+import pandas as pd
+from flask import Flask, jsonify, request, send_file, session
+from io import StringIO, BytesIO
+import json
+import time
+
+# Initialize Flask application
+app = Flask(__name__)
+app.secret_key = 'your-secret-key'  # Secure key for session management; replace with a strong value
+
+# Database connection parameters; update with your SQL Server details
+DB_CONFIG = {
+    'server': 'your_server',       # SQL Server hostname or IP
+    'database': 'your_database',   # Database name
+    'user': 'your_username',       # SQL Server username
+    'password': 'your_password'    # SQL Server password
+}
+
+# Function to establish a connection to SQL Server
+def get_db_connection():
+    """
+    Establishes a connection to the SQL Server database.
+    Returns:
+        pymssql.Connection: Database connection object, or None if connection fails.
+    """
+    try:
+        conn = pymssql.connect(**DB_CONFIG)
+        print("Database connection established")
+        return conn
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return None
+
+# Function to fetch distinct rater names from the database
+def fetch_raters():
+    """
+    Retrieves distinct ReviewerName values from the SampleData table.
+    Returns:
+        list: List of rater names, sorted alphabetically.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT ReviewerName FROM SampleData ORDER BY ReviewerName")
+        raters = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        return raters
+    except Exception as e:
+        print(f"Error fetching raters: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Function to fetch distinct agent names for a given rater
+def fetch_agents(rater_name):
+    """
+    Retrieves distinct AgentTitle values for a specified ReviewerName.
+    Args:
+        rater_name (str): Selected rater name.
+    Returns:
+        list: List of agent names, sorted alphabetically.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor()
+        query = "SELECT DISTINCT AgentTitle FROM SampleData WHERE ReviewerName = %s ORDER BY AgentTitle"
+        cursor.execute(query, (rater_name,))
+        agents = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        return agents
+    except Exception as e:
+        print(f"Error fetching agents: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Function to fetch distinct dates for a rater and agent combination
+def fetch_dates(rater_name, agent_name):
+    """
+    Retrieves distinct DataEntry dates for a given ReviewerName and AgentTitle.
+    Args:
+        rater_name (str): Selected rater name.
+        agent_name (str): Selected agent name.
+    Returns:
+        list: List of dates in YYYY-MM-DD format, sorted chronologically.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT DISTINCT CONVERT(VARCHAR(10), DataEntry, 120)
+            FROM SampleData
+            WHERE ReviewerName = %s AND AgentTitle = %s
+            ORDER BY DataEntry
+        """
+        cursor.execute(query, (rater_name, agent_name))
+        dates = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        return dates
+    except Exception as e:
+        print(f"Error fetching dates: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Function to fetch data based on user selections and generate CSV
+def fetch_data(rater_name, agent_names, load_dates):
+    """
+    Fetches all columns from SampleData based on filters and returns CSV content.
+    Args:
+        rater_name (str): Selected rater name.
+        agent_names (list): List of selected agent names (or empty for all).
+        load_dates (list): List of selected dates (or empty for all).
+    Returns:
+        BytesIO: In-memory buffer containing CSV data, or None if error occurs.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor(as_dict=True)  # Use dict cursor for dynamic columns
+        # Build dynamic query with SELECT *
+        query = "SELECT * FROM SampleData WHERE ReviewerName = %s"
+        params = [rater_name]
+
+        # Add agent filter if specific agents are selected
+        if agent_names and 'all' not in agent_names:
+            placeholders = ','.join(['%s' for _ in agent_names])
+            query += f" AND AgentTitle IN ({placeholders})"
+            params.extend(agent_names)
+
+        # Add date filter if dates are selected
+        if load_dates:
+            placeholders = ','.join(['%s' for _ in load_dates])
+            query += f" AND CONVERT(VARCHAR(10), DataEntry, 120) IN ({placeholders})"
+            params.extend(load_dates)
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        cursor.close()
+
+        # Create DataFrame from query results
+        df = pd.DataFrame(rows)
+
+        # Generate CSV in memory
+        csv_buffer = StringIO()
+        df.to_csv(csv_buffer, index=False)
+        csv_bytes = csv_buffer.getvalue().encode('utf-8')
+        return BytesIO(csv_bytes)
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+        return None
+    finally:
+        conn.close()
+
+# Route to serve the main page
+@app.route('/')
+def index():
+    """
+    Serves the main HTML page.
+    Returns:
+        Response: Static index.html file.
+    """
+    return app.send_static_file('index.html')
+
+# Route to fetch rater names
+@app.route('/get_raters', methods=['GET'])
+def get_raters():
+    """
+    Endpoint to retrieve distinct rater names.
+    Returns:
+        JSON: List of rater names, or empty list on error.
+    """
+    try:
+        raters = fetch_raters()
+        return jsonify(raters)
+    except Exception as e:
+        print(f"Error in get_raters: {e}")
+        return jsonify([]), 500
+
+# Route to fetch agent names
+@app.route('/get_agents', methods=['POST'])
+def get_agents():
+    """
+    Endpoint to retrieve agent names for a given rater.
+    Request Body:
+        rater_name (str): Selected rater name.
+    Returns:
+        JSON: List of agent names including 'all' option, or empty list on error.
+    """
+    try:
+        rater_name = request.json.get('rater_name')
+        if not rater_name:
+            return jsonify([]), 400
+        agents = fetch_agents(rater_name)
+        return jsonify(['all'] + agents)
+    except Exception as e:
+        print(f"Error in get_agents: {e}")
+        return jsonify([]), 500
+
+# Route to fetch dates
+@app.route('/get_dates', methods=['POST'])
+def get_dates():
+    """
+    Endpoint to retrieve dates for a given rater and agent.
+    Request Body:
+        rater_name (str): Selected rater name.
+        agent_name (str): Selected agent name.
+    Returns:
+        JSON: List of dates, or empty list on error or if agent is 'all'.
+    """
+    try:
+        rater_name = request.json.get('rater_name')
+        agent_name = request.json.get('agent_name')
+        if not rater_name or not agent_name or agent_name == 'all':
+            return jsonify([])
+        dates = fetch_dates(rater_name, agent_name)
+        return jsonify(dates)
+    except Exception as e:
+        print(f"Error in get_dates: {e}")
+        return jsonify([]), 500
+
+# Route to fetch and download data as CSV
+@app.route('/fetch_data', methods=['POST'])
+def fetch_data_route():
+    """
+    Endpoint to fetch data based on selections and download as CSV.
+    Request Body:
+        rater_name (str): Selected rater name.
+        agent_names (str): JSON string of selected agent names.
+        load_dates (str): JSON string of selected dates.
+    Returns:
+        Response: CSV file download, or JSON error response.
+    """
+    try:
+        rater_name = request.json.get('rater_name')
+        agent_names = request.json.get('agent_names')
+        load_dates = request.json.get('load_dates')
+        
+        if not rater_name:
+            return jsonify({'error': 'Rater name is required'}), 400
+        
+        # Simulate progress updates
+        session['progress'] = 0
+        for i in range(0, 101, 20):
+            session['progress'] = i
+            time.sleep(0.2)  # Simulate processing time
+
+        # Fetch data as CSV
+        csv_buffer = fetch_data(rater_name, json.loads(agent_names) if agent_names else [], json.loads(load_dates) if load_dates else [])
+        if csv_buffer:
+            session['progress'] = 100
+            return send_file(
+                csv_buffer,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name='data.csv'
+            )
+        else:
+            return jsonify({'error': 'No data found or error occurred'}), 500
+    except Exception as e:
+        print(f"Error in fetch_data_route: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Route to get progress percentage
+@app.route('/get_progress', methods=['GET'])
+def get_progress():
+    """
+    Endpoint to retrieve the current progress percentage.
+    Returns:
+        JSON: Object with progress percentage (0-100).
+    """
+    try:
+        progress = session.get('progress', 0)
+        return jsonify({'progress': progress})
+    except Exception as e:
+        print(f"Error in get_progress: {e}")
+        return jsonify({'progress': 0}), 500
+
+# Run the Flask application
+if __name__ == '__main__':
+    app.run(debug=True)
