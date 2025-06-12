@@ -1,323 +1,784 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Aravind Pilla</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CQMT RANDOM SAMPLES</title>
+    <!-- Bootstrap CSS for styling and layout -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Select2 CSS for searchable dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <!-- flatpickr CSS for date picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <style>
+        /* General body styling with light yellow background */
+        body {
+            background-color: #FFF9E6;
+            font-family: 'Inter', Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        /* Container for vertical middle alignment */
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        /* Card styling with 3D effect for inputs */
+        .card-3d {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            margin-bottom: 20px;
+        }
+        /* Hover effect for cards */
+        .card-3d:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+        /* Glow animation for enabled cards */
+        .card-enabled {
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        /* Fade effect for disabled cards */
+        .card-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            animation: fadeDisable 0.5s ease;
+        }
+        /* Ensure Select2 dropdowns span full width minus update button */
+        .select2-container {
+            width: 100% !important;
+            flex-grow: 1;
+            max-width: calc(100% - 80px); /* Adjust for 70px button + 10px gap */
+        }
+        /* Style Select2 inputs */
+        .select2-container--default .select2-selection--single,
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 8px;
+            min-height: 38px;
+        }
+        .select2-selection__rendered {
+            line-height: 22px !important;
+        }
+        /* Style date input */
+        .date-input {
+            white-space: nowrap;
+            resize: none;
+            min-height: 38px;
+            line-height: 1.5;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            width: 100%;
+        }
+        /* Multi-line date input for >3 selections */
+        .date-input.multi-line {
+            white-space: pre-wrap;
+            height: auto;
+        }
+        /* Style buttons with 3D effect */
+        .btn-clear, .btn-submit {
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .btn-clear:hover, .btn-submit:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+        }
+        .btn-clear:active, .btn-submit:active {
+            transform: translateZ(-8px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        /* Style update buttons */
+        .btn-update {
+            display: inline-block !important;
+            visibility: visible;
+            padding: 8px 12px;
+            margin-left: 0;
+            border-radius: 4px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            transition: background-color 0.3s ease;
+            width: 70px;
+            min-width: 70px;
+            height: 38px;
+            line-height: 1;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1;
+        }
+        .btn-update:hover:not(:disabled) {
+            background-color: #218838;
+        }
+        .btn-update:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        /* Input group for aligning update button */
+        .input-group {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            overflow: visible;
+        }
+        .input-group select.form-select {
+            margin-right: 10px; /* Gap between input and button */
+        }
+        .input-group > * {
+            flex-shrink: 0;
+        }
+        /* Status messages container */
+        .status-messages {
+            min-height: 38px;
+            max-height: 38px;
+            overflow: hidden;
+            text-align: center;
+            position: relative;
+            flex-grow: 1;
+            margin: 0 10px; /* Space between buttons */
+        }
+        .status-message {
+            position: absolute;
+            width: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .status-message.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .status-message.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        /* Style tooltips */
+        .tooltip-inner {
+            background: linear-gradient(45deg, #333, #555);
+            color: white;
+            font-size: 14px;
+            padding: 10px;
+            border-radius: 6px;
+            opacity: 0.95;
+        }
+        .tooltip.bs-tooltip-top .tooltip-arrow::before {
+            border-top-color: #333;
+        }
+        .tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+            border-bottom-color: #333;
+        }
+        /* Animation keyframes */
+        .fade-out {
+            animation: fadeOut 0.5s ease forwards;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        .explode {
+            animation: explode 0.5s ease forwards;
+        }
+        .pulse {
+            animation: pulse 0.6s ease infinite;
+        }
+        /* Progress overlay for submission */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .progress-bar {
+            width: 0;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 3px;
+            transition: width 0.1s ease;
+        }
+        .progress-text {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        /* Ensure overlay is hidden by default */
+        .overlay.hidden {
+            display: none;
+        }
+        /* Animation definitions */
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes explode {
+            from { transform: scale(1) rotate(0deg); opacity: 1; }
+            to { transform: scale(1.5) rotate(15deg); opacity: 0; }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+            100% { transform: scale(1); }
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 5px #4CAF50; }
+            to { box-shadow: 0 0 15px #4CAF50; }
+        }
+        @keyframes fadeDisable {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+    </style>
 </head>
-
 <body>
-  <center>
-    <h1>Aravind Pilla</h1>
-    <!-- <img src="Images/aravind.png" alt="Image is not supported by your browser" height="200" width="180"> -->
-    <table height=60% width=100%>
-      <tr bgcolor='lightblue'>
-        <th>
-          <h3><strong>Machine Learning Engineer and Certified Data Science & AI Professional</strong></h3>
-        </th>
-      </tr>
-    </table>
+    <div class="container">
+        <!-- Page title with increased margin -->
+        <h1 class="text-center mb-5">CQMT RANDOM SAMPLES</h1>
+        <div class="row justify-content-center">
+            <!-- Rater Name input card (visible initially, centered) -->
+            <div class="col-md-4 mx-auto">
+                <div class="card-3d card-disabled" id="rater-card" data-bs-toggle="tooltip" title="Select a rater">
+                    <label for="rater-name" class="form-label">Rater Name</label>
+                    <div class="input-group">
+                        <select id="rater-name" class="form-select" data-placeholder="Select Rater" disabled>
+                            <option></option>
+                        </select>
+                        <button id="rater-update" class="btn-update" disabled title="Update selection">Update</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Agent Name input card (hidden initially) -->
+            <div class="col-md-4 d-none" id="agent-card-container">
+                <div class="card-3d card-disabled" id="agent-card" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Select one or more Agents or select All">
+                    <label for="agent-name" class="form-label">Agent Name</label>
+                    <div class="input-group">
+                        <select id="agent-name" class="form-select" multiple data-placeholder="Select Agents or All" disabled>
+                            <option value="all">All</option>
+                        </select>
+                        <button id="agent-update" class="btn-update" disabled title="Update selection">Update</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Load Date input card (hidden initially) -->
+            <div class="col-md-4 d-none" id="date-card-container">
+                <div class="card-3d card-disabled" id="date-card" data-bs-toggle="tooltip" title="Select one or more dates">
+                    <label for="load-date" class="form-label">Load Date</label>
+                    <input id="load-date" class="date-input" placeholder="Select Dates" disabled>
+                </div>
+            </div>
+        </div>
+        <!-- Buttons and status messages -->
+        <div class="row mt-4">
+            <div class="col-md-12 d-flex align-items-center">
+                <button id="clear-btn" class="btn btn-secondary btn-clear">Clear</button>
+                <div id="status-messages" class="status-messages"></div>
+                <button id="submit-btn" class="btn btn-primary btn-submit">Submit</button>
+            </div>
+        </div>
+        <!-- Progress overlay (hidden by default) -->
+        <div id="overlay" class="overlay hidden">
+            <div class="progress-text">Submitting... <span id="progress-percent">0%</span></div>
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+    </div>
 
-    <table>
-      <tr>
-        <td>📱 +91 7660047229 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 📧 aravind.engineer001@gmail.com &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 📌 Hyderabad, India &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 🔗 <a href="https://github.com/krish9219">https://github.com/krish9219</a>
-        </td>
-      </tr>
-    </table>
+    <!-- jQuery for DOM manipulation and AJAX -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <!-- Bootstrap JS for tooltips and utilities -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Select2 JS for searchable dropdowns -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- flatpickr JS for date picker -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script>
+        // Avoid jQuery conflicts
+        const $ = jQuery.noConflict();
 
-  </center>
+        $(document).ready(function () {
+            console.log('DOM ready');
 
-  <hr>
+            try {
+                // Calculate dynamic date range (today to past 30 days)
+                const today = new Date();
+                const past30Days = Array.from({ length: 30 }, (_, i) => {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    return date.toISOString().split('T')[0];
+                }).reverse();
 
+                // Function to add status message with animation
+                function addStatusMessage(text, delay) {
+                    setTimeout(() => {
+                        const $status = $('#status-messages');
+                        const $message = $('<div class="status-message"></div>').text(text);
+                        $status.append($message);
+                        console.log('Status message added:', text); // Debug
+                        $message.addClass('active');
+                        setTimeout(() => {
+                            $message.addClass('fade-out');
+                            setTimeout(() => {
+                                $message.remove();
+                            }, 500);
+                        }, 2000); // Increased duration to prevent overlap
+                    }, delay);
+                }
 
-  <table>
-    <th align='left'>
-      <h3>Summary</h3><br>
-    </th>
-    <tr>
-      <td>
-        4+ years experienced in Analytics with passion to solve real-world business challanges. Proficient
-        in deploying complex modeling Algorithms/Techniques and extracting valuable insights for key
-        stakeholders and organizational leadership.
-      </td>
-    </tr>
-  </table>
-  <br>
+                // Initialize Select2 for Rater Name (disabled initially)
+                let $raterName = $('#rater-name');
+                let $raterUpdate = $('#rater-update');
+                if ($raterName.length) {
+                    $raterName.select2({
+                        placeholder: 'Select Rater',
+                        allowClear: true,
+                        width: '100%'
+                    });
+                    console.log('Rater Name Select2 initialized');
+                    console.log('Rater update button present:', $raterUpdate.length > 0); // Debug
+                    // Fetch raters from backend using AJAX
+                    addStatusMessage('Loading rater names...', 0);
+                    $.ajax({
+                        url: '/get_raters',
+                        method: 'GET',
+                        success: function (data) {
+                            console.log('Received raters:', data); // Debug response
+                            $raterName.empty().append('<option></option>');
+                            data.forEach(rater => {
+                                $raterName.append(new Option(rater, rater));
+                            });
+                            // Enable Rater Name card after data is loaded
+                            $raterName.prop('disabled', false);
+                            $('#rater-card').removeClass('card-disabled').addClass('card-enabled');
+                            addStatusMessage('Rater names loaded', 2500); // Staggered delay
+                        },
+                        error: function (xhr) {
+                            console.error('Failed to fetch raters:', xhr);
+                            alert('Failed to load raters. Please try again.');
+                            addStatusMessage('Failed to load rater names', 2500);
+                        }
+                    });
+                } else {
+                    console.error('Rater Name element not found');
+                }
 
+                // Initialize Select2 for Agent Name (disabled initially)
+                let $agentName = $('#agent-name');
+                let $agentUpdate = $('#agent-update');
+                if ($agentName.length) {
+                    $agentName.select2({
+                        placeholder: 'Select Agents or All',
+                        allowClear: true,
+                        width: '100%',
+                        data: [{ id: 'all', text: 'All', selected: true }]
+                    });
+                    console.log('Agent Name Select2 initialized');
+                    console.log('Agent update button present:', $agentUpdate.length > 0); // Debug
+                } else {
+                    console.error('Agent Name element not found');
+                }
 
-  <hr size=5 noshade>
+                // Initialize flatpickr for Load Date (disabled initially)
+                let $loadDate = $('#load-date');
+                let datePicker = null;
+                if ($loadDate.length) {
+                    datePicker = flatpickr('#load-date', {
+                        mode: 'multiple',
+                        dateFormat: 'Y-m-d',
+                        maxDate: today,
+                        minDate: past30Days[0],
+                        enable: [],
+                        disable: past30Days
+                    });
+                    console.log('flatpickr initialized');
+                } else {
+                    console.error('Load Date element not found');
+                }
 
-  <div id='Education'>
+                // Track selections for update buttons
+                let selectedRater = null;
+                let selectedAgents = [];
 
+                // Enable update buttons based on selections
+                $raterName.on('change', function () {
+                    try {
+                        selectedRater = $raterName.val();
+                        console.log('Rater selected:', selectedRater); // Debug
+                        // Enable update button if rater is selected
+                        $raterUpdate.prop('disabled', !selectedRater);
+                    } catch (e) {
+                        console.error('Error in rater change handler:', e);
+                    }
+                });
 
-    <table height=100%, width=100%>
-      <tr>
-        <th align='left'>
-          <h3>EDUCATION</h3>
-        </th>
-      </tr>
-      <tr>
-        <td>
-          <table>
-            <tr>
-              <th align='left'>
-                B-Tech Mechanical Engineering <br>
-              </th>
-            </tr>
-            <tr>
-              <td><br></td>
-            </tr>
-            <tr>
-              <td rowspan=2>
-                Sanketika Institute of Technology and Management <br><br>
-                <em>Got 70.01 %</em>
-              </td>
-            </tr>
-          </table>
+                $agentName.on('change', function () {
+                    try {
+                        selectedAgents = $agentName.val() || [];
+                        console.log('Agents selected:', selectedAgents); // Debug
+                        // Enable update button if any agents are selected (including 'all')
+                        $agentUpdate.prop('disabled', !selectedAgents.length);
+                        // Remove 'All' option if specific agents are selected
+                        if (selectedAgents.length && !selectedAgents.includes('all')) {
+                            $agentName.find('option[value="all"]').remove();
+                        }
+                    } catch (e) {
+                        console.error('Error in agent change handler:', e);
+                    }
+                });
 
-          <br><br>
+                // Handle multi-line dates for >3 selections
+                $loadDate.on('change', function () {
+                    try {
+                        if (!$loadDate.length) {
+                            console.error('Load Date element not found in date change handler');
+                            return;
+                        }
+                        const selectedDates = $loadDate.val() ? $loadDate.val().split(', ') : [];
+                        console.log('Dates changed:', selectedDates); // Debug
+                        $loadDate.toggleClass('multi-line', selectedDates.length > 3);
+                    } catch (e) {
+                        console.error('Error in date change handler:', e);
+                    }
+                });
 
-          <table>
-            <tr>
-              <th align='left'>
-                Intermediate (+2) <br>
-              </th>
-            </tr>
-            <tr>
-              <td><br></td>
-            </tr>
-            <tr>
-              <td rowspan=2>
-                Sri Chaitanya Junior College <br><br>
-                <em>Got 84.00 %</em>
-              </td>
-            </tr>
+                // Handle Rater Name update button click
+                $raterUpdate.on('click', function () {
+                    try {
+                        // Hide tooltips
+                        $('[data-bs-toggle="tooltip"]').tooltip('hide');
+                        if (!selectedRater) {
+                            alert('Please select a rater.');
+                            return;
+                        }
+                        console.log('Rater update clicked for:', selectedRater); // Debug
+                        addStatusMessage('Loading agent names...', 0);
+                        // Clear and disable Agent Name and Load Date
+                        $agentName.addClass('fade-out explode');
+                        $loadDate.addClass('fade-out explode');
+                        setTimeout(() => {
+                            $agentName.val(null).trigger('change');
+                            $agentName.select2({
+                                data: [{ id: 'all', text: 'All', selected: true }],
+                                width: '100%'
+                            });
+                            if (datePicker && typeof datePicker.clear === 'function') {
+                                datePicker.clear();
+                            } else {
+                                $loadDate.val('');
+                            }
+                            $loadDate.removeClass('multi-line');
+                            $agentName.prop('disabled', true);
+                            $loadDate.prop('disabled', true);
+                            $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#date-card').removeClass('card-enabled').addClass('card-disabled');
+                            $agentUpdate.prop('disabled', true);
+                            // Hide Agent Name and Load Date cards
+                            $('#agent-card-container').addClass('d-none');
+                            $('#date-card-container').addClass('d-none');
+                            $agentName.removeClass('fade-out explode').addClass('fade-in');
+                            $loadDate.removeClass('fade-out explode').addClass('fade-in');
+                            setTimeout(() => {
+                                $agentName.removeClass('fade-in');
+                                $loadDate.removeClass('fade-in');
+                            }, 500);
+                            // Fetch agents from backend
+                            $.ajax({
+                                url: '/get_agents',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ Rater_Name: selectedRater }),
+                                success: function (data) {
+                                    console.log('Received agents:', data); // Debug response
+                                    $agentName.empty();
+                                    data.forEach(agent => {
+                                        $agentName.append(new Option(agent, agent, agent === 'all', agent === 'all'));
+                                    });
+                                    $agentName.trigger('change');
+                                    // Enable and show Agent Name card
+                                    $agentName.prop('disabled', false);
+                                    $('#agent-card').removeClass('card-disabled').addClass('card-enabled');
+                                    $('#agent-card-container').removeClass('d-none');
+                                    console.log('Agent Name card shown'); // Debug
+                                    addStatusMessage('Agent names loaded', 2500);
+                                },
+                                error: function (xhr) {
+                                    console.error('Failed to fetch agents:', xhr);
+                                    alert('Failed to load agents. Please try again.');
+                                    addStatusMessage('Failed to load agent names', 2500);
+                                }
+                            });
+                        }, 500);
+                    } catch (e) {
+                        console.error('Error in rater update handler:', e);
+                    }
+                });
 
-          </table>
-        </td>
+                // Handle Agent Name update button click
+                $agentUpdate.on('click', function () {
+                    try {
+                        // Hide tooltips
+                        $('[data-bs-toggle="tooltip"]').tooltip('hide');
+                        if (!selectedAgents.length) {
+                            alert('Please select specific agents or All.');
+                            return;
+                        }
+                        console.log('Agent update clicked for:', selectedAgents); // Debug
+                        addStatusMessage('Loading dates...', 0);
+                        $loadDate.addClass('fade-out explode');
+                        setTimeout(() => {
+                            if (datePicker && typeof datePicker.clear === 'function') {
+                                datePicker.clear();
+                            } else {
+                                $loadDate.val('');
+                            }
+                            $loadDate.removeClass('multi-line');
+                            $loadDate.prop('disabled', true);
+                            $('#date-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#date-card-container').addClass('d-none');
+                            $loadDate.removeClass('fade-out explode').addClass('fade-in');
+                            setTimeout(() => {
+                                $loadDate.removeClass('fade-in');
+                            }, 500);
+                            // Fetch dates for all selected agents
+                            $.ajax({
+                                url: '/get_dates',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    Rater_Name: selectedRater,
+                                    Agent_Names: selectedAgents
+                                }),
+                                success: function (data) {
+                                    console.log('Received dates:', data); // Debug response
+                                    if (datePicker && typeof datePicker.set === 'function') {
+                                        // Ensure dates are in YYYY-MM-DD format
+                                        const validDates = data.filter(date => {
+                                            const regex = /^\d{4}-\d{2}-\d{2}$/;
+                                            return regex.test(date);
+                                        });
+                                        console.log('Valid dates for flatpickr:', validDates); // Debug
+                                        datePicker.set('enable', validDates);
+                                        datePicker.set('disable', past30Days.filter(d => !validDates.includes(d)));
+                                    }
+                                    // Enable and show Load Date card
+                                    $loadDate.prop('disabled', false);
+                                    $('#date-card').removeClass('card-disabled').addClass('card-enabled');
+                                    $('#date-card-container').removeClass('d-none');
+                                    console.log('Load Date card shown'); // Debug
+                                    addStatusMessage('Dates loaded', 2500);
+                                },
+                                error: function (xhr) {
+                                    console.error('Failed to fetch dates:', xhr);
+                                    alert('Failed to load dates. Please try again.');
+                                    addStatusMessage('Failed to load dates', 2500);
+                                }
+                            });
+                        }, 500);
+                    } catch (e) {
+                        console.error('Error in agent update handler:', e);
+                    }
+                });
 
-        <td align='right'>
-          <table>
-            <tr>
-              <td rowspan="2">
-                📅 Jul'10 - May'14 <br><br>
-                Visakhapatnam, IN.
-              </td>
-            </tr>
-          </table>
+                // Handle Clear button click
+                $('#clear-btn').on('click', function () {
+                    try {
+                        console.log('Clear button clicked');
+                        const $raterName = $('#rater-name');
+                        const $loadDate = $('#load-date');
+                        const $agentName = $('#agent-name');
+                        const $overlay = $('#overlay');
+                        const $raterUpdate = $('#rater-update');
+                        const $agentUpdate = $('#agent-update');
+                        if ($raterName.length && $loadDate.length && $agentName.length && $overlay.length) {
+                            // Apply explode animation to all inputs
+                            $raterName.addClass('fade-out explode');
+                            $loadDate.addClass('fade-out explode');
+                            $agentName.addClass('fade-out explode');
+                            $overlay.addClass('hidden'); // Ensure overlay is hidden
+                            addStatusMessage('Clearing selections...', 0);
+                            setTimeout(() => {
+                                // Reset inputs
+                                $raterName.val('').trigger('change');
+                                if (datePicker && typeof datePicker.clear === 'function') {
+                                    console.log('Clearing datePicker');
+                                    datePicker.clear();
+                                } else {
+                                    console.warn('datePicker.clear is not available');
+                                    $loadDate.val('');
+                                }
+                                $loadDate.removeClass('multi-line');
+                                $agentName.val(null).trigger('change');
+                                $agentName.select2({
+                                    data: [{ id: 'all', text: 'All', selected: true }],
+                                    width: '100%'
+                                });
+                                // Disable Agent Name, Load Date, and update buttons
+                                $agentName.prop('disabled', true);
+                                $loadDate.prop('disabled', true);
+                                $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
+                                $('#date-card').removeClass('card-enabled').addClass('card-disabled');
+                                $raterUpdate.prop('disabled', true);
+                                $agentUpdate.prop('disabled', true);
+                                // Hide Agent Name and Load Date cards
+                                $('#agent-card-container').addClass('d-none');
+                                $('#date-card-container').addClass('d-none');
+                                selectedRater = null;
+                                selectedAgents = [];
+                                // Reset animations
+                                $raterName.removeClass('fade-out explode').addClass('fade-in');
+                                $loadDate.removeClass('fade-out explode').addClass('fade-in');
+                                $agentName.removeClass('fade-out explode').addClass('fade-in');
+                                setTimeout(() => {
+                                    $raterName.removeClass('fade-in');
+                                    $loadDate.removeClass('fade-in');
+                                    $agentName.removeClass('fade-in');
+                                    addStatusMessage('Selections cleared', 2500);
+                                }, 500);
+                            }, 500);
+                        }
+                    } catch (e) {
+                        console.error('Error in clear button handler:', e);
+                    }
+                });
 
-          <br><br>
+                // Handle Submit button click
+                $('#submit-btn').on('click', function () {
+                    try {
+                        const $raterName = $('#rater-name');
+                        const $loadDate = $('#load-date');
+                        const $agentName = $('#agent-name');
+                        const $overlay = $('#overlay');
+                        const $progressBar = $('#progress-bar');
+                        const $progressPercent = $('#progress-percent');
+                        if ($raterName.length && $loadDate.length && $agentName.length && $overlay.length && $progressBar.length) {
+                            const rater = $raterName.val();
+                            if (!rater) {
+                                alert('Please select a rater.');
+                                return;
+                            }
+                            // Apply pulse animation to all inputs
+                            $raterName.addClass('pulse');
+                            $loadDate.addClass('pulse');
+                            $agentName.addClass('pulse');
+                            $overlay.removeClass('hidden');
+                            $progressBar.css('width', '0');
+                            addStatusMessage('Your input is submitted to the backend please wait...', 0);
+                            addStatusMessage('Fetching your data please wait...', 2500);
 
-          <table>
-            <tr>
-              <td rowspan="2">
-                📅 Jul'08 - May'10 <br><br>
-                Visakhapatnam, IN.
-              </td>
-            </tr>
-          </table>
-        </td>
-    </table>
-    <br>
-  </div>
+                            // Poll progress from backend
+                            let progressInterval = setInterval(function () {
+                                $.get('/get_progress', function (data) {
+                                    const progress = data.progress;
+                                    $progressPercent.text(`${progress}%`);
+                                    $progressBar.css('width', `${(progress / 100) * 300}px`);
+                                    if (progress >= 100) {
+                                        clearInterval(progressInterval);
+                                    }
+                                }).fail(function () {
+                                    console.error('Failed to fetch progress');
+                                });
+                            }, 200);
 
-  <hr size=5 noshade>
+                            // Submit data to fetch CSV using AJAX
+                            $.ajax({
+                                url: '/fetch_data',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    Rater_Name: rater,
+                                    Agent_Names: JSON.stringify($agentName.val() || []),
+                                    Load_Dates: JSON.stringify($loadDate.val() ? $loadDate.val().split(', ') : [])
+                                }),
+                                xhrFields: {
+                                    responseType: 'blob'
+                                },
+                                success: function (data) {
+                                    // Handle CSV download
+                                    $raterName.removeClass('pulse').addClass('fade-out explode');
+                                    $loadDate.removeClass('pulse').addClass('fade-out explode');
+                                    $agentName.removeClass('pulse').addClass('fade-out explode');
+                                    setTimeout(() => {
+                                        const url = window.URL.createObjectURL(new Blob([data]));
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = 'data.csv';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                        window.URL.revokeObjectURL(url);
+                                        // Reset UI and hide overlay
+                                        $raterName.removeClass('fade-out explode').addClass('fade-in');
+                                        $loadDate.removeClass('fade-out explode').addClass('fade-in');
+                                        $agentName.removeClass('fade-out explode').addClass('fade-in');
+                                        $overlay.addClass('hidden');
+                                        $progressBar.css('width', '0');
+                                        setTimeout(() => {
+                                            $raterName.removeClass('fade-in');
+                                            $loadDate.removeClass('fade-in');
+                                            $agentName.removeClass('fade-in');
+                                            addStatusMessage('Data fetching completed', 2500);
+                                        }, 500);
+                                    }, 500);
+                                    clearInterval(progressInterval);
+                                },
+                                error: function (xhr) {
+                                    console.error('Error fetching data:', xhr);
+                                    alert('Error fetching data: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error'));
+                                    $overlay.addClass('hidden');
+                                    $progressBar.css('width', '0');
+                                    $raterName.removeClass('pulse').addClass('fade-out explode');
+                                    $loadDate.removeClass('pulse').addClass('fade-out explode');
+                                    $agentName.removeClass('pulse').addClass('fade-out explode');
+                                    setTimeout(() => {
+                                        $raterName.removeClass('fade-out explode').addClass('fade-in');
+                                        $loadDate.removeClass('fade-out explode').addClass('fade-in');
+                                        $agentName.removeClass('fade-out explode').addClass('fade-in');
+                                        setTimeout(() => {
+                                            $raterName.removeClass('fade-in');
+                                            $loadDate.removeClass('fade-in');
+                                            $agentName.removeClass('fade-in');
+                                            addStatusMessage('Failed to fetch data', 2500);
+                                        }, 500);
+                                    }, 500);
+                                    clearInterval(progressInterval);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error in submit button handler:', e);
+                    }
+                });
 
-  <div id='ks'>
-    <table>
-      <tr>
-        <th colspan="15" align='left'>
-          <h3>KEY SKILLS</h3>
-        </th>
-      </tr>
-      <tr>
-        <ul>
-          <td>
-            <li>Data Analysis</li>
-          </td>
-          <td><br></td>
-          <td>
-            <li>Leadership & Training</li>
-          </td>
-          <td><br></td>
-      <tr>
-        <td>
-          <li>Strategy</li>
-        </td>
-        <td><br></td>
-        <td>
-          <li>Project Management & Delivery</li>
-        </td>
-        <td><br></td>
-      </tr>
-
-      <tr>
-        <td>
-          <li>Process Improvement</li>
-        </td>
-        <td><br></br></td>
-        <td>
-          <li>Data Visualization</li>
-        </td>
-        <td><br></td>
-      </tr>
-
-      <tr>
-        <td>
-          <li>Prodective Modelling & Analytics</li>
-        </td>
-        <td><br></td>
-        <td>
-          <li>Sentiment Analysis</li>
-        </td>
-      </tr>
-      </ul>
-      </tr>
-    </table>
-  </div>
-
-
-  <br>
-
-  <hr size=5 noshade>
-
-  <div id='ts'>
-    <table>
-      <th align='left'><h3>TECHNICAL SKILLS</h3></th>
-      <tr>
-        <td>
-          <ul>
-            <li><strong>Packages: </strong> &nbsp Scikit-Learn, NumPy, SciPy, Plotly, Tensorflow, Keras, Pandas, NLTK, Beautiful Soup, Matplotlib, StatsModels, Flask, Selenium WebDriver</li>
-            <br>
-            <li><strong>Statistics/ML: </strong>&nbsp Linear/Logistic Regression, SVM, Ensemble, Trees, Random Forest, Clustering, Gradient Boosted trees</li>
-            <br>
-            <li><strong>Programming/Softwares: </strong>&nbsp Python, SAS, R, Tableau, HTML&CSS, JavaScript, Node.js and React.js, SAS DI Studios</li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-
-
-  <hr size=5 noshade>
-
-  <div id='certification'>
-    <table>
-      <th align='left'><h3>CERTIFICATIONS</h3></th>
-      <tr>
-        <td>
-          <ul>
-            <li>Certified Data Science & AI Professional | Edvancer Eduventers | Aug'18 - Jun'19</li>
-            <br>
-            <li>Web Development BootCamp 2020 | Udemy | Jul'20</li>
-            <br>
-            <li>Selenium Web Automation | Udemy | Aug'20</li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-
-
-  </div>
-
-
-  <hr size=5 noshade>
-
-  <div id="projects">
-
-    <table>
-      <tr>
-        <th align='left'><h3>KEY DATA SCIENCE PROJECTS</h3></th>
-      </tr>
-      <tr>
-        <td>
-          <h4>Stack Overflow Tag Prediction</h4>
-          <ul>
-            <li><em>Objective</em> : &nbsp Tagging stack overflow questions with topics given the question text.</li>
-            <br>
-            <li><em>Tech Stack</em>:&nbsp Python</li>
-            <br>
-            <li><em>Solution</em>:&nbsp Huge amount of data and variety in the context of words led us to use deep learning models instead of simply BOW features based ML models . LSTM with Glove embeddings gave us 0.6 F1 Score on validation set.</li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-      <br>
-      <tr>
-        <td>
-          <h4>Distracted Driver Detection</h4>
-          <ul>
-            <li>Distracted Driver Detection : An image classification project done with deep learning models. Solution and details hosted on git-hub : <a href="https://github.com/krish9219/Distracted-Driver-Detection-using-deep-CNN">Git Hub link</a> </li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <hr size=5 noshade>
-
-  <div id="experience">
-    <table>
-      <tr>
-        <td>
-          <h3>PROFESSIONAL EXPERIENCE</h3>
-          <h4>Senior Analyst</h4>
-          <h4>Synchrony Internationals Pvt. Ltd. - &nbsp&nbsp&nbsp 📅&nbsp&nbsp&nbsp Sep'20 - Present</h4>
-
-          <em>Technology Stack : &nbsp Python, SAS, Tableau, SQL, Pyspark, Web Automation
-          </em>
-          <ul>
-            <li>Data Management using <strong>SAS, Python</strong></li>
-            <br>
-            <li>Data Visualisation using <strong>Tableau</strong></li>
-            <br>
-            <li>Data Warehouse testings and validations</li>
-            <br>
-            <li>Web application developments for Clients using <strong>Flask</strong></li>
-            <br>
-            <li>Pulling Data from EDL using <strong>Pyspark</strong></li>
-            <br>
-            <li>Web Automation usind <strong>Selenium</strong></li>
-            <br>
-          </ul>
-          
-          <h4>Machine Learning Enginer</h4>
-          <h4>Sysark Datasol Pvt Ltd. - &nbsp&nbsp&nbsp 📅 &nbsp&nbsp&nbsp May'16 - Sep'20</h4>
-
-          <em>Technology Stack : &nbsp Python, Tableau, SQL </em>
-          <ul>
-            <li>Steering rapid model creation in Python using Pandas, NumPy, SciKit-Learn & plot.ly for data visualization</li>
-            <br>
-            <li>Deploying ridge regression model & LASSO solver via gradient descentt to select the regularization parameters</li>
-            <br>
-            <li>Creating NLP models for <strong>Sentiment Analysis</strong></li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <hr size=5 noshade>
-<div id="information">
-<table>
-  <tr>
-    <td>
-      <h3>ADDITIONAL INFORMATION</h3>
-      <ul>
-        <li><strong>Languages</strong>: &nbsp English, Telugu & Hindi</li>
-        <br>
-      </ul>
-    </td>
-  </tr>
-</table>
-</div>
-
-
+                // Initialize Bootstrap tooltips
+                try {
+                    $('[data-bs-toggle="tooltip"]').tooltip();
+                    console.log('Tooltips initialized');
+                } catch (e) {
+                    console.error('Error initializing tooltips:', e);
+                }
+            } catch (e) {
+                console.error('Global script error:', e);
+            }
+        });
+    </script>
 </body>
-
 </html>
