@@ -1,320 +1,323 @@
-CQMT Random Samples Web Application Documentation
-Welcome to the CQMT Random Samples web application! This user-friendly tool allows you to filter and download data from a database by selecting a rater, agents, and dates, and then exporting the results as a CSV file. This documentation is designed for everyone, even if you have no background in web development. It explains what the application does, how to use it, how it works behind the scenes, and how to set it up. Let’s get started!
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
 
-Table of Contents
-What is CQMT Random Samples?
-Who Should Use This Application?
-How to Use the Application (Step-by-Step Guide)
-How the Application Works (Simple Explanation)
-Setting Up the Application
-Troubleshooting Common Issues
-Technical Details for Curious Users
-Glossary of Terms
-1. What is CQMT Random Samples?
-The CQMT Random Samples web application is a tool that helps you extract specific data from a database called ACM_VERINT_SAMPLES_MASTER. You can choose a rater (a person who reviews data), one or more agents (people whose work is being reviewed), and specific dates when the data was entered. Once you’ve made your selections, the application creates a CSV file (like a spreadsheet) containing the filtered data, which you can download and open in programs like Microsoft Excel.
+<head>
+  <meta charset="utf-8">
+  <title>Aravind Pilla</title>
+</head>
 
-Key Features
-User-Friendly Interface: Simple dropdowns and buttons make it easy to select data.
-Step-by-Step Process: Cards for Rater Name, Agent Name, and Load Date appear one at a time to guide you.
-Status Messages: The app shows messages like “Loading agent names...” to keep you informed.
-Progress Bar: A visual indicator shows the progress of data fetching.
-CSV Download: Get your data in a downloadable file.
-Error Handling: Alerts inform you if something goes wrong, like selecting no rater.
-2. Who Should Use This Application?
-This application is for anyone who needs to extract data from the ACM_VERINT_SAMPLES_MASTER database, such as:
+<body>
+  <center>
+    <h1>Aravind Pilla</h1>
+    <!-- <img src="Images/aravind.png" alt="Image is not supported by your browser" height="200" width="180"> -->
+    <table height=60% width=100%>
+      <tr bgcolor='lightblue'>
+        <th>
+          <h3><strong>Machine Learning Engineer and Certified Data Science & AI Professional</strong></h3>
+        </th>
+      </tr>
+    </table>
 
-Managers or Analysts: To review agent performance data for specific raters and dates.
-Quality Control Teams: To analyze samples for quality assurance.
-Non-Technical Users: The interface is designed to be simple, requiring no coding knowledge.
-IT Administrators: To set up and maintain the application (instructions provided below).
-No web development experience is needed to use the app, but you’ll need access to a computer with a web browser (like Chrome or Firefox) and the database credentials.
+    <table>
+      <tr>
+        <td>📱 +91 7660047229 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 📧 aravind.engineer001@gmail.com &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 📌 Hyderabad, India &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 🔗 <a href="https://github.com/krish9219">https://github.com/krish9219</a>
+        </td>
+      </tr>
+    </table>
 
-3. How to Use the Application (Step-by-Step Guide)
-Follow these steps to use the CQMT Random Samples web application. It’s as easy as filling out a form!
+  </center>
 
-Step 1: Open the Application
-Open your web browser (e.g., Google Chrome, Firefox).
-Type the address provided by your IT team (e.g., http://localhost:5000 if running locally).
-Press Enter. You’ll see a page with the title CQMT RANDOM SAMPLES and a single card labeled Rater Name in the center.
-Step 2: Select a Rater
-The Rater Name card has a dropdown menu. Click it to see a list of raters (loaded from the database).
-Choose one rater by clicking their name.
-The Update button next to the dropdown will turn green.
-Click the Update button.
-A message like “Loading agent names...” appears between the Clear and Submit buttons below. Wait for “Agent names loaded” to confirm the next step.
-Step 3: Select Agents
-After updating the rater, the Agent Name card appears next to the Rater Name card.
-Click the Agent Name dropdown to see a list of agents associated with the selected rater. It includes an “All” option to select all agents.
-Choose one or more agents by clicking them (hold Ctrl for multiple selections) or select “All”.
-The Update button next to the dropdown turns green.
-Click the Update button.
-Messages like “Loading dates...” and “Dates loaded” appear. If you select specific agents, the “All” option disappears from the dropdown.
-Step 4: Select Dates
-After updating agents, the Load Date card appears next to the Agent Name card.
-Click the Load Date input field to open a calendar.
-Select one or more dates by clicking them (dates available are based on your rater and agent selections).
-If you select more than three dates, they’ll display on multiple lines for readability.
-Step 5: Download the Data
-Once you’ve selected a rater, agents, and dates, click the Submit button at the bottom right.
-An overlay appears with a progress bar and messages like “Your input is submitted...” and “Fetching your data...”.
-When complete, a CSV file named data.csv automatically downloads.
-Open the file in Excel or a similar program to view your data.
-Step 6: Clear Selections (Optional)
-To start over, click the Clear button at the bottom left.
-All selections reset, Agent Name and Load Date cards disappear, and you’re back to the Rater Name card.
-Messages like “Clearing selections...” and “Selections cleared” confirm the reset.
-Tips
-If you see an alert (e.g., “Please select a rater”), follow the prompt to fix your selection.
-Watch the status messages to know what’s happening.
-If nothing happens after clicking a button, check your internet connection or contact your IT team.
-4. How the Application Works (Simple Explanation)
-Imagine the CQMT Random Samples app as a librarian who helps you find specific books in a huge library (the database). Here’s how it works in simple terms:
+  <hr>
 
-The Interface (What You See):
-The webpage is like a form with three sections (cards): Rater Name, Agent Name, and Load Date.
-Initially, only the Rater Name card is visible, like starting with the first question on a quiz.
-As you answer each question (by selecting and updating), the next card appears, guiding you step-by-step.
-Buttons like Update, Clear, and Submit are like instructions you give the librarian.
-Status messages and a progress bar are like the librarian telling you, “I’m searching...” or “Here’s your book!”
-The Backend (The Librarian):
-The backend is a program (app.py) running on a server, like a librarian who knows where all the books are.
-When you select a rater and click Update, the backend searches the database for agents linked to that rater.
-When you select agents and click Update, it finds dates for those agents and the rater.
-When you click Submit, it gathers all matching data, puts it into a CSV file (like a report), and sends it to you.
-The database (ACM_VERINT_SAMPLES_MASTER) is like a big book with columns for Rater_Name, Agent_Name, Load_Date, and other data.
-How They Talk:
-The frontend (webpage) and backend (librarian) communicate using messages called AJAX requests.
-For example, clicking Update sends a message to the backend saying, “Get me agents for this rater.”
-The backend replies with the list, and the webpage shows it in the dropdown.
-Visual Feedback:
-Cards appear one at a time to keep things simple.
-Messages scroll up (like a chat) to tell you what’s happening.
-Animations (e.g., cards “exploding” when cleared) make the app feel lively.
-Tooltips (hover messages) guide you but disappear when you click Update to avoid clutter.
-5. Setting Up the Application
-If you’re an IT administrator or someone setting up the application, follow these steps. If you’re a regular user, your IT team will handle this, and you can skip to How to Use the Application.
 
-Requirements
-Computer: A PC with Python 3.8+ installed (download from python.org).
-Web Browser: Chrome, Firefox, or Edge.
-Database Access: Credentials for a SQL Server database with the ACM_VERINT_SAMPLES_MASTER table, containing columns Rater_Name, Agent_Name, Load_Date (date type), and other fields.
-Internet: For downloading dependencies (optional if already installed).
-Step 1: Prepare the Files
-Download or Copy Files:
-Save the backend file (app.py) from this artifact.
-Save the frontend file (index.html) from this artifact.
-Organize Files:
-Create a folder (e.g., cqmt_app).
-Place app.py in the root folder.
-Create a subfolder named static and place index.html inside it.
-Your structure should look like:
-text
+  <table>
+    <th align='left'>
+      <h3>Summary</h3><br>
+    </th>
+    <tr>
+      <td>
+        4+ years experienced in Analytics with passion to solve real-world business challanges. Proficient
+        in deploying complex modeling Algorithms/Techniques and extracting valuable insights for key
+        stakeholders and organizational leadership.
+      </td>
+    </tr>
+  </table>
+  <br>
 
-Collapse
 
-Wrap
+  <hr size=5 noshade>
 
-Copy
-cqmt_app/
-├── app.py
-├── static/
-│   └── index.html
-Step 2: Install Dependencies
-Open a terminal (Command Prompt on Windows, Terminal on Mac/Linux).
-Navigate to the project folder:
-bash
+  <div id='Education'>
 
-Collapse
 
-Wrap
+    <table height=100%, width=100%>
+      <tr>
+        <th align='left'>
+          <h3>EDUCATION</h3>
+        </th>
+      </tr>
+      <tr>
+        <td>
+          <table>
+            <tr>
+              <th align='left'>
+                B-Tech Mechanical Engineering <br>
+              </th>
+            </tr>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td rowspan=2>
+                Sanketika Institute of Technology and Management <br><br>
+                <em>Got 70.01 %</em>
+              </td>
+            </tr>
+          </table>
 
-Run
+          <br><br>
 
-Copy
-cd path/to/cqmt_app
-Install required Python libraries:
-bash
+          <table>
+            <tr>
+              <th align='left'>
+                Intermediate (+2) <br>
+              </th>
+            </tr>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td rowspan=2>
+                Sri Chaitanya Junior College <br><br>
+                <em>Got 84.00 %</em>
+              </td>
+            </tr>
 
-Collapse
+          </table>
+        </td>
 
-Wrap
+        <td align='right'>
+          <table>
+            <tr>
+              <td rowspan="2">
+                📅 Jul'10 - May'14 <br><br>
+                Visakhapatnam, IN.
+              </td>
+            </tr>
+          </table>
 
-Run
+          <br><br>
 
-Copy
-pip install flask pymssql pandas
-Flask: Runs the web server.
-pymssql: Connects to SQL Server.
-pandas: Creates CSV files.
-Step 3: Configure the Database
-Open app.py in a text editor (e.g., Notepad, VS Code).
-Find the DB_CONFIG section:
-python
+          <table>
+            <tr>
+              <td rowspan="2">
+                📅 Jul'08 - May'10 <br><br>
+                Visakhapatnam, IN.
+              </td>
+            </tr>
+          </table>
+        </td>
+    </table>
+    <br>
+  </div>
 
-Collapse
+  <hr size=5 noshade>
 
-Wrap
+  <div id='ks'>
+    <table>
+      <tr>
+        <th colspan="15" align='left'>
+          <h3>KEY SKILLS</h3>
+        </th>
+      </tr>
+      <tr>
+        <ul>
+          <td>
+            <li>Data Analysis</li>
+          </td>
+          <td><br></td>
+          <td>
+            <li>Leadership & Training</li>
+          </td>
+          <td><br></td>
+      <tr>
+        <td>
+          <li>Strategy</li>
+        </td>
+        <td><br></td>
+        <td>
+          <li>Project Management & Delivery</li>
+        </td>
+        <td><br></td>
+      </tr>
 
-Run
+      <tr>
+        <td>
+          <li>Process Improvement</li>
+        </td>
+        <td><br></br></td>
+        <td>
+          <li>Data Visualization</li>
+        </td>
+        <td><br></td>
+      </tr>
 
-Copy
-DB_CONFIG = {
-    'server': 'your_server',
-    'database': 'your_database',
-    'user': 'your_username',
-    'password': 'your_password'
-}
-Replace the placeholders with your SQL Server details:
-server: Your SQL Server hostname or IP (e.g., localhost or 192.168.1.100).
-database: Name of the database containing ACM_VERINT_SAMPLES_MASTER.
-user: SQL Server username.
-password: SQL Server password.
-Save app.py.
-Step 4: Run the Application
-In the terminal, ensure you’re in the project folder.
-Run the backend:
-bash
+      <tr>
+        <td>
+          <li>Prodective Modelling & Analytics</li>
+        </td>
+        <td><br></td>
+        <td>
+          <li>Sentiment Analysis</li>
+        </td>
+      </tr>
+      </ul>
+      </tr>
+    </table>
+  </div>
 
-Collapse
 
-Wrap
+  <br>
 
-Run
+  <hr size=5 noshade>
 
-Copy
-python app.py
-You’ll see output like:
-text
+  <div id='ts'>
+    <table>
+      <th align='left'><h3>TECHNICAL SKILLS</h3></th>
+      <tr>
+        <td>
+          <ul>
+            <li><strong>Packages: </strong> &nbsp Scikit-Learn, NumPy, SciPy, Plotly, Tensorflow, Keras, Pandas, NLTK, Beautiful Soup, Matplotlib, StatsModels, Flask, Selenium WebDriver</li>
+            <br>
+            <li><strong>Statistics/ML: </strong>&nbsp Linear/Logistic Regression, SVM, Ensemble, Trees, Random Forest, Clustering, Gradient Boosted trees</li>
+            <br>
+            <li><strong>Programming/Softwares: </strong>&nbsp Python, SAS, R, Tableau, HTML&CSS, JavaScript, Node.js and React.js, SAS DI Studios</li>
+            <br>
+          </ul>
+        </td>
+      </tr>
+    </table>
+  </div>
 
-Collapse
 
-Wrap
 
-Copy
-* Running on http://127.0.0.1:5000 (Press CTRL+C to quit)
-Open a web browser and go to http://localhost:5000. The application should load.
-Step 5: Test the Application
-Follow the How to Use the Application steps.
-If the page doesn’t load or you see errors, check Troubleshooting.
-Notes for IT Admins
-Security: Replace 'your-secret-key' in app.py with a strong, random string for session security.
-Server Deployment: For production, use a WSGI server (e.g., Gunicorn) and a web server (e.g., Nginx). Host on a server with a static IP or domain.
-Database: Ensure ACM_VERINT_SAMPLES_MASTER is populated with data and Load_Date is in a date format.
-Port Conflicts: If port 5000 is in use, change the port in app.py (e.g., app.run(debug=True, port=5001)).
-6. Troubleshooting Common Issues
-Here are solutions to common problems you might encounter:
+  <hr size=5 noshade>
 
-Problem: Page Doesn’t Load
-Check: Is the Flask server running? Look for the terminal output (http://127.0.0.1:5000).
-Fix: Run python app.py in the project folder.
-Check: Is the URL correct? Ensure you’re visiting http://localhost:5000.
-Fix: Verify the address or port.
-Problem: “Failed to load raters/agents/dates” Alert
-Check: Are database credentials correct in app.py?
-Fix: Update DB_CONFIG with valid server, database, user, and password.
-Check: Is the database accessible? Test connectivity using a SQL client.
-Fix: Ensure SQL Server is running and the table ACM_VERINT_SAMPLES_MASTER exists.
-Check: Backend logs in the terminal for errors (e.g., “Error fetching dates”).
-Fix: Share logs with your IT team.
-Problem: No Dates Appear in Load Date
-Check: Did you select agents (or “All”) and click Update?
-Fix: Ensure agents are selected before updating.
-Check: Console logs in the browser (right-click → Inspect → Console) for Received dates: [].
-Fix: Verify /get_dates response in Network tab; share logs if empty.
-Check: Backend logs for Fetched 0 dates.
-Fix: Ensure Load_Date in the database has valid dates for the rater and agents.
-Problem: Status Messages Overlap
-Check: Are messages appearing too quickly?
-Fix: The updated code increases display time (2000ms) and staggers delays (2500ms). If overlap persists, contact support.
-Check: Browser compatibility (e.g., older browsers).
-Fix: Use Chrome, Firefox, or Edge.
-Problem: Cards Don’t Appear
-Check: Is only the Rater Name card visible initially?
-Fix: This is expected. Select a rater and click Update to show Agent Name.
-Check: Console logs for Agent Name card shown or Load Date card shown.
-Fix: Ensure AJAX calls succeed; share logs if cards remain hidden.
-Problem: CSV Doesn’t Download
-Check: Did you select a rater, agents, and dates before clicking Submit?
-Fix: Complete all steps.
-Check: Progress bar reaches 100%?
-Fix: Wait for “Data fetching completed” message.
-Check: Backend logs for “Error fetching data”.
-Fix: Share logs with IT team.
-Need Help?
-Contact your IT team with:
-Screenshots of the issue.
-Browser console logs (right-click → Inspect → Console).
-Backend logs (terminal output).
-Steps you took before the issue.
-7. Technical Details for Curious Users
-If you’re interested in how the application is built, here’s a simple overview. You don’t need to understand this to use the app, but it’s here for those who are curious!
+  <div id='certification'>
+    <table>
+      <th align='left'><h3>CERTIFICATIONS</h3></th>
+      <tr>
+        <td>
+          <ul>
+            <li>Certified Data Science & AI Professional | Edvancer Eduventers | Aug'18 - Jun'19</li>
+            <br>
+            <li>Web Development BootCamp 2020 | Udemy | Jul'20</li>
+            <br>
+            <li>Selenium Web Automation | Udemy | Aug'20</li>
+            <br>
+          </ul>
+        </td>
+      </tr>
+    </table>
 
-Frontend (What You See)
-File: index.html (in static/ folder).
-Purpose: Creates the webpage you interact with.
-Technologies:
-HTML: Structures the page (cards, buttons, etc.).
-CSS: Styles the page (colors, animations, layout) using Bootstrap for responsiveness.
-JavaScript: Adds interactivity (dropdowns, button clicks) using jQuery, Select2 (dropdowns), and flatpickr (date picker).
-How It Works:
-The page loads with only the Rater Name card visible, centered.
-When you click Update, JavaScript sends a request to the backend and shows the next card (Agent Name, then Load Date).
-Status messages scroll up to inform you, with animations for a smooth experience.
-Tooltips guide you but hide during actions to avoid clutter.
-The page adjusts dynamically to center visible cards.
-Backend (The Librarian)
-File: app.py (in project root).
-Purpose: Handles data requests and communicates with the database.
-Technologies:
-Python: Programming language for the backend.
-Flask: Web framework to create the server.
-pymssql: Connects to SQL Server.
-pandas: Converts data to CSV.
-Endpoints:
-/get_raters: Returns a list of unique rater names.
-/get_agents: Returns agents for a selected rater, including “All”.
-/get_dates: Returns dates for a rater and agents, in YYYY-MM-DD format.
-/fetch_data: Generates a CSV based on selections.
-/get_progress: Tracks CSV generation progress.
-How It Works:
-Receives requests from the frontend (e.g., “Get agents for rater X”).
-Queries the ACM_VERINT_SAMPLES_MASTER table in SQL Server.
-Sends back data or files (CSV) to the frontend.
-Database
-Table: ACM_VERINT_SAMPLES_MASTER.
-Columns (at minimum):
-Rater_Name: Text, name of the reviewer.
-Agent_Name: Text, name of the agent.
-Load_Date: Date, when data was entered (e.g., 2025-06-01).
-Other columns (included in CSV output).
-Purpose: Stores all data the app filters and exports.
-How Frontend and Backend Connect
-The frontend sends AJAX requests (like emails) to the backend with details (e.g., selected rater).
-The backend replies with data (e.g., list of agents) or a file (CSV).
-The frontend updates the page based on the reply, showing new cards or downloading files.
-8. Glossary of Terms
-CSV File: A simple spreadsheet file you can open in Excel, containing rows and columns of data.
-Database: A digital storage system (like a filing cabinet) holding the ACM_VERINT_SAMPLES_MASTER table.
-Rater: A person who reviews or rates data in the database.
-Agent: A person whose work is being reviewed, linked to a rater.
-Load Date: The date when data was entered into the database.
-Dropdown: A menu that expands when clicked, letting you choose options (e.g., rater names).
-Update Button: A green button next to dropdowns that confirms your selection and loads the next step.
-Clear Button: Resets all selections and hides cards except Rater Name.
-Submit Button: Starts the data export process, downloading a CSV file.
-Status Messages: Text that appears between Clear/Submit buttons, telling you what’s happening (e.g., “Loading...”).
-Progress Bar: A visual line showing how close the app is to finishing the CSV download.
-Tooltip: A small pop-up message when you hover over a card, explaining what to do.
-Frontend: The webpage you see and interact with in your browser.
-Backend: The server program that talks to the database and sends data to the webpage.
-AJAX: A way for the webpage to talk to the server without reloading the page.
-SQL Server: The software storing the database, accessed with credentials.
-Support
-If you have questions or issues:
 
-Users: Contact your IT team with details (steps, screenshots, error messages).
-IT Admins: Check Troubleshooting or share logs with your development team.
-Developers: Refer to the artifact IDs for version history:
-index.html: bb98d943-adf6-47f5-95de-c98423d7ad77, version 68cefeed-3cd6-4eab-9442-ec9be221207b.
-app.py: bb66368b-3a41-41d7-ae72-9f1af0d9e009, version 160ad1c4-356f-4808-ba59-4faccb.
-Thank you for using CQMT Random Samples! This tool is designed to make data extraction easy and efficient. If you need further assistance, your IT team is here to help.
+  </div>
+
+
+  <hr size=5 noshade>
+
+  <div id="projects">
+
+    <table>
+      <tr>
+        <th align='left'><h3>KEY DATA SCIENCE PROJECTS</h3></th>
+      </tr>
+      <tr>
+        <td>
+          <h4>Stack Overflow Tag Prediction</h4>
+          <ul>
+            <li><em>Objective</em> : &nbsp Tagging stack overflow questions with topics given the question text.</li>
+            <br>
+            <li><em>Tech Stack</em>:&nbsp Python</li>
+            <br>
+            <li><em>Solution</em>:&nbsp Huge amount of data and variety in the context of words led us to use deep learning models instead of simply BOW features based ML models . LSTM with Glove embeddings gave us 0.6 F1 Score on validation set.</li>
+            <br>
+          </ul>
+        </td>
+      </tr>
+      <br>
+      <tr>
+        <td>
+          <h4>Distracted Driver Detection</h4>
+          <ul>
+            <li>Distracted Driver Detection : An image classification project done with deep learning models. Solution and details hosted on git-hub : <a href="https://github.com/krish9219/Distracted-Driver-Detection-using-deep-CNN">Git Hub link</a> </li>
+            <br>
+          </ul>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <hr size=5 noshade>
+
+  <div id="experience">
+    <table>
+      <tr>
+        <td>
+          <h3>PROFESSIONAL EXPERIENCE</h3>
+          <h4>Senior Analyst</h4>
+          <h4>Synchrony Internationals Pvt. Ltd. - &nbsp&nbsp&nbsp 📅&nbsp&nbsp&nbsp Sep'20 - Present</h4>
+
+          <em>Technology Stack : &nbsp Python, SAS, Tableau, SQL, Pyspark, Web Automation
+          </em>
+          <ul>
+            <li>Data Management using <strong>SAS, Python</strong></li>
+            <br>
+            <li>Data Visualisation using <strong>Tableau</strong></li>
+            <br>
+            <li>Data Warehouse testings and validations</li>
+            <br>
+            <li>Web application developments for Clients using <strong>Flask</strong></li>
+            <br>
+            <li>Pulling Data from EDL using <strong>Pyspark</strong></li>
+            <br>
+            <li>Web Automation usind <strong>Selenium</strong></li>
+            <br>
+          </ul>
+          
+          <h4>Machine Learning Enginer</h4>
+          <h4>Sysark Datasol Pvt Ltd. - &nbsp&nbsp&nbsp 📅 &nbsp&nbsp&nbsp May'16 - Sep'20</h4>
+
+          <em>Technology Stack : &nbsp Python, Tableau, SQL </em>
+          <ul>
+            <li>Steering rapid model creation in Python using Pandas, NumPy, SciKit-Learn & plot.ly for data visualization</li>
+            <br>
+            <li>Deploying ridge regression model & LASSO solver via gradient descentt to select the regularization parameters</li>
+            <br>
+            <li>Creating NLP models for <strong>Sentiment Analysis</strong></li>
+            <br>
+          </ul>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <hr size=5 noshade>
+<div id="information">
+<table>
+  <tr>
+    <td>
+      <h3>ADDITIONAL INFORMATION</h3>
+      <ul>
+        <li><strong>Languages</strong>: &nbsp English, Telugu & Hindi</li>
+        <br>
+      </ul>
+    </td>
+  </tr>
+</table>
+</div>
+
+
+</body>
+
+</html>
