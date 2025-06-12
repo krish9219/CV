@@ -99,6 +99,9 @@
         .tooltip.bs-tooltip-top .tooltip-arrow::before {
             border-top-color: #333;
         }
+        .tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+            border-bottom-color: #333;
+        }
         /* Animation keyframes */
         .fade-out {
             animation: fadeOut 0.5s ease forwards;
@@ -175,18 +178,18 @@
         <!-- Page title -->
         <h1 class="text-center mb-4">CQMT RANDOM SAMPLES</h1>
         <div class="row">
-            <!-- Rater Name input card (always enabled) -->
+            <!-- Rater Name input card (disabled until raters loaded) -->
             <div class="col-md-4">
-                <div class="card-3d card-enabled" id="rater-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Select a rater">
+                <div class="card-3d card-disabled" id="rater-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Select a rater">
                     <label for="rater-name" class="form-label">Rater Name</label>
-                    <select id="rater-name" class="form-select" data-placeholder="Select Rater">
+                    <select id="rater-name" class="form-select" data-placeholder="Select Rater" disabled>
                         <option></option>
                     </select>
                 </div>
             </div>
             <!-- Agent Name input card (disabled initially) -->
             <div class="col-md-4">
-                <div class="card-3d card-disabled" id="agent-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Select one or more Agents or select All for all Agents">
+                <div class="card-3d card-disabled" id="agent-card" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Select one or more Agents or select All for all Agents">
                     <label for="agent-name" class="form-label">Agent Name</label>
                     <select id="agent-name" class="form-select" multiple data-placeholder="Select Agents or All" disabled>
                         <option value="all">All</option>
@@ -239,7 +242,7 @@
                     return date.toISOString().split('T')[0];
                 }).reverse();
 
-                // Initialize Select2 for Rater Name
+                // Initialize Select2 for Rater Name (disabled initially)
                 let $raterName = $('#rater-name');
                 if ($raterName.length) {
                     $raterName.select2({
@@ -248,14 +251,25 @@
                         width: '100%'
                     });
                     console.log('Rater Name Select2 initialized');
-                    // Fetch raters from backend
-                    $.get('/get_raters', function (data) {
-                        $raterName.empty().append('<option></option>');
-                        data.forEach(rater => {
-                            $raterName.append(new Option(rater, rater));
-                        });
-                    }).fail(function () {
-                        console.error('Failed to fetch raters');
+                    // Fetch raters from backend using AJAX
+                    $.ajax({
+                        url: '/get_raters',
+                        method: 'GET',
+                        success: function (data) {
+                            console.log('Received raters:', data); // Debug response
+                            $raterName.empty().append('<option></option>');
+                            data.forEach(rater => {
+                                $raterName.append(new Option(rater, rater));
+                            });
+                            // Enable Rater Name card after data is loaded
+                            $raterName.prop('disabled', false);
+                            $('#rater-card').removeClass('card-disabled').addClass('card-enabled');
+                        },
+                        error: function (xhr) {
+                            console.error('Failed to fetch raters:', xhr);
+                            // Keep disabled on error
+                            alert('Failed to load raters. Please try again.');
+                        }
                     });
                 } else {
                     console.error('Rater Name element not found');
@@ -315,7 +329,7 @@
                             return;
                         }
                         const selectedRater = $raterName.val();
-                        console.log('Rater changed:', selectedRater);
+                        console.log('Rater changed:', selectedRater); // Debug rater selection
 
                         // Animate and clear other inputs
                         if ($loadDate.length && $agentName.length) {
@@ -344,17 +358,31 @@
 
                                 // Enable/disable Agent Name based on rater selection
                                 if (selectedRater) {
-                                    $agentName.prop('disabled', false);
-                                    $('#agent-card').removeClass('card-disabled').addClass('card-enabled');
-                                    // Fetch agents from backend
-                                    $.post('/get_agents', { rater_name: selectedRater }, function (data) {
-                                        $agentName.empty();
-                                        data.forEach(agent => {
-                                            $agentName.append(new Option(agent, agent, agent === 'all', agent === 'all'));
-                                        });
-                                        $agentName.trigger('change');
-                                    }).fail(function () {
-                                        console.error('Failed to fetch agents');
+                                    // Keep Agent Name disabled until agents are loaded
+                                    $agentName.prop('disabled', true);
+                                    $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
+                                    // Fetch agents from backend using AJAX with JSON payload
+                                    console.log('Fetching agents for rater:', selectedRater); // Debug
+                                    $.ajax({
+                                        url: '/get_agents',
+                                        method: 'POST',
+                                        contentType: 'application/json',
+                                        data: JSON.stringify({ rater_name: selectedRater }),
+                                        success: function (data) {
+                                            console.log('Received agents:', data); // Debug response
+                                            $agentName.empty();
+                                            data.forEach(agent => {
+                                                $agentName.append(new Option(agent, agent, agent === 'all', agent === 'all'));
+                                            });
+                                            $agentName.trigger('change');
+                                            // Enable Agent Name card after data is loaded
+                                            $agentName.prop('disabled', false);
+                                            $('#agent-card').removeClass('card-disabled').addClass('card-enabled');
+                                        },
+                                        error: function (xhr) {
+                                            console.error('Failed to fetch agents:', xhr);
+                                            alert('Failed to load agents. Please try again.');
+                                        }
                                     });
                                 } else {
                                     $agentName.prop('disabled', true);
@@ -375,7 +403,7 @@
                     }
                 });
 
-                // Handle agent selection to enable/disable Load Date and update dropdown
+                // Handle agent selection to enable/disable Load Date
                 $agentName.on('select2:select', function (e) {
                     try {
                         if (!$agentName.length) {
@@ -394,19 +422,33 @@
                         const selectedRater = $raterName.val();
                         // Enable Load Date if specific agents are selected
                         if ($loadDate.length && selectedRater && selected.length && !selected.includes('all')) {
-                            $loadDate.prop('disabled', false);
-                            $('#date-card').removeClass('card-disabled').addClass('card-enabled');
-                            // Fetch dates for the first selected agent
-                            $.post('/get_dates', {
-                                rater_name: selectedRater,
-                                agent_name: selected[0]
-                            }, function (data) {
-                                if (datePicker && typeof datePicker.set === 'function') {
-                                    datePicker.set('enable', data);
-                                    datePicker.set('disable', past30Days.filter(d => !data.includes(d)));
+                            // Keep Load Date disabled until dates are loaded
+                            $loadDate.prop('disabled', true);
+                            $('#date-card').removeClass('card-enabled').addClass('card-disabled');
+                            // Fetch dates for the first selected agent using AJAX
+                            console.log('Fetching dates for rater:', selectedRater, 'agent:', selected[0]); // Debug
+                            $.ajax({
+                                url: '/get_dates',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    rater_name: selectedRater,
+                                    agent_name: selected[0]
+                                }),
+                                success: function (data) {
+                                    console.log('Received dates:', data); // Debug response
+                                    if (datePicker && typeof datePicker.set === 'function') {
+                                        datePicker.set('enable', data);
+                                        datePicker.set('disable', past30Days.filter(d => !data.includes(d)));
+                                    }
+                                    // Enable Load Date card after data is loaded
+                                    $loadDate.prop('disabled', false);
+                                    $('#date-card').removeClass('card-disabled').addClass('card-enabled');
+                                },
+                                error: function (xhr) {
+                                    console.error('Failed to fetch dates:', xhr);
+                                    alert('Failed to load dates. Please try again.');
                                 }
-                            }).fail(function () {
-                                console.error('Failed to fetch dates');
                             });
                         } else {
                             $loadDate.prop('disabled', true);
@@ -430,15 +472,26 @@
                         const selectedRater = $raterName.val();
                         // Update Agent Name dropdown
                         if (selectedRater) {
-                            $.post('/get_agents', { rater_name: selectedRater }, function (data) {
-                                const availableAgents = data.filter(agent => !selected.includes(agent) || agent === 'all');
-                                $agentName.empty();
-                                availableAgents.forEach(agent => {
-                                    $agentName.append(new Option(agent, agent, agent === 'all' && selected.length === 0, agent === 'all' && selected.length === 0));
-                                });
-                                $agentName.val(selected.length === 0 ? ['all'] : selected).trigger('change');
-                            }).fail(function () {
-                                console.error('Failed to fetch agents');
+                            // Fetch agents from backend using AJAX
+                            console.log('Fetching agents for rater:', selectedRater); // Debug
+                            $.ajax({
+                                url: '/get_agents',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ rater_name: selectedRater }),
+                                success: function (data) {
+                                    console.log('Received agents:', data); // Debug response
+                                    const availableAgents = data.filter(agent => !selected.includes(agent) || agent === 'all');
+                                    $agentName.empty();
+                                    availableAgents.forEach(agent => {
+                                        $agentName.append(new Option(agent, agent, agent === 'all' && selected.length === 0, agent === 'all' && selected.length === 0));
+                                    });
+                                    $agentName.val(selected.length === 0 ? ['all'] : selected).trigger('change');
+                                },
+                                error: function (xhr) {
+                                    console.error('Failed to fetch agents:', xhr);
+                                    alert('Failed to load agents. Please try again.');
+                                }
                             });
                         } else {
                             $agentName.select2({
@@ -544,7 +597,7 @@
                                 });
                             }, 200);
 
-                            // Submit data to fetch CSV
+                            // Submit data to fetch CSV using AJAX
                             $.ajax({
                                 url: '/fetch_data',
                                 method: 'POST',
@@ -571,7 +624,7 @@
                                         a.click();
                                         document.body.removeChild(a);
                                         window.URL.revokeObjectURL(url);
-                                        // Reset UI
+                                        // Reset UI and hide overlay
                                         $raterName.removeClass('fade-out').addClass('fade-in');
                                         $loadDate.removeClass('fade-out').addClass('fade-in');
                                         $agentName.removeClass('fade-out').addClass('fade-in');
