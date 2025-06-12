@@ -103,7 +103,7 @@
             display: inline-block !important;
             visibility: visible;
             padding: 8px 12px;
-            margin-left: 0; /* Rely on input margin */
+            margin-left: 0;
             border-radius: 4px;
             background-color: #28a745;
             color: white;
@@ -253,8 +253,8 @@
 </head>
 <body>
     <div class="container">
-        <!-- Page title -->
-        <h1 class="text-center mb-4">CQMT RANDOM SAMPLES</h1>
+        <!-- Page title with increased margin -->
+        <h1 class="text-center mb-5">CQMT RANDOM SAMPLES</h1>
         <div class="row">
             <!-- Rater Name input card (disabled until raters loaded) -->
             <div class="col-md-4">
@@ -434,8 +434,12 @@
                     try {
                         selectedAgents = $agentName.val() || [];
                         console.log('Agents selected:', selectedAgents); // Debug
-                        // Enable update button if specific agents are selected
-                        $agentUpdate.prop('disabled', !selectedAgents.length || selectedAgents.includes('all'));
+                        // Enable update button if any agents are selected (including 'all')
+                        $agentUpdate.prop('disabled', !selectedAgents.length);
+                        // Remove 'All' option if specific agents are selected
+                        if (selectedAgents.length && !selectedAgents.includes('all')) {
+                            $agentName.find('option[value="all"]').remove();
+                        }
                     } catch (e) {
                         console.error('Error in agent change handler:', e);
                     }
@@ -449,7 +453,7 @@
                             return;
                         }
                         const selectedDates = $loadDate.val() ? $loadDate.val().split(', ') : [];
-                        console.log('Dates changed:', selectedDates);
+                        console.log('Dates changed:', selectedDates); // Debug
                         $loadDate.toggleClass('multi-line', selectedDates.length > 3);
                     } catch (e) {
                         console.error('Error in date change handler:', e);
@@ -459,6 +463,8 @@
                 // Handle Rater Name update button click
                 $raterUpdate.on('click', function () {
                     try {
+                        // Hide tooltips
+                        $('[data-bs-toggle="tooltip"]').tooltip('hide');
                         if (!selectedRater) {
                             alert('Please select a rater.');
                             return;
@@ -496,7 +502,7 @@
                                 url: '/get_agents',
                                 method: 'POST',
                                 contentType: 'application/json',
-                                data: JSON.stringify({ rater_name: selectedRater }),
+                                data: JSON.stringify({ Rater_Name: selectedRater }),
                                 success: function (data) {
                                     console.log('Received agents:', data); // Debug response
                                     $agentName.empty();
@@ -524,8 +530,10 @@
                 // Handle Agent Name update button click
                 $agentUpdate.on('click', function () {
                     try {
-                        if (!selectedAgents.length || selectedAgents.includes('all')) {
-                            alert('Please select specific agents.');
+                        // Hide tooltips
+                        $('[data-bs-toggle="tooltip"]').tooltip('hide');
+                        if (!selectedAgents.length) {
+                            alert('Please select specific agents or All.');
                             return;
                         }
                         console.log('Agent update clicked for:', selectedAgents); // Debug
@@ -550,14 +558,20 @@
                                 method: 'POST',
                                 contentType: 'application/json',
                                 data: JSON.stringify({
-                                    rater_name: selectedRater,
-                                    agent_names: selectedAgents
+                                    Rater_Name: selectedRater,
+                                    Agent_Names: selectedAgents
                                 }),
                                 success: function (data) {
                                     console.log('Received dates:', data); // Debug response
                                     if (datePicker && typeof datePicker.set === 'function') {
-                                        datePicker.set('enable', data);
-                                        datePicker.set('disable', past30Days.filter(d => !data.includes(d)));
+                                        // Ensure dates are in YYYY-MM-DD format
+                                        const validDates = data.filter(date => {
+                                            const regex = /^\d{4}-\d{2}-\d{2}$/;
+                                            return regex.test(date);
+                                        });
+                                        console.log('Valid dates for flatpickr:', validDates); // Debug
+                                        datePicker.set('enable', validDates);
+                                        datePicker.set('disable', past30Days.filter(d => !validDates.includes(d)));
                                     }
                                     // Enable Load Date card
                                     $loadDate.prop('disabled', false);
@@ -613,7 +627,7 @@
                                 $agentName.prop('disabled', true);
                                 $loadDate.prop('disabled', true);
                                 $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
-                                $('#date-card').removeClass('card-enabled').addClass('card-disabled');
+                                $('#date-card').removeClass('card-disabled').addClass('card-disabled');
                                 $raterUpdate.prop('disabled', true);
                                 $agentUpdate.prop('disabled', true);
                                 selectedRater = null;
@@ -679,9 +693,9 @@
                                 method: 'POST',
                                 contentType: 'application/json',
                                 data: JSON.stringify({
-                                    rater_name: rater,
-                                    agent_names: JSON.stringify($agentName.val() || []),
-                                    load_dates: JSON.stringify($loadDate.val() ? $loadDate.val().split(', ') : [])
+                                    Rater_Name: rater,
+                                    Agent_Names: JSON.stringify($agentName.val() || []),
+                                    Load_Dates: JSON.stringify($loadDate.val() ? $loadDate.val().split(', ') : [])
                                 }),
                                 xhrFields: {
                                     responseType: 'blob'
