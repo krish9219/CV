@@ -55,6 +55,8 @@
         /* Ensure Select2 dropdowns span full width */
         .select2-container {
             width: 100% !important;
+            flex-grow: 1;
+            max-width: calc(100% - 50px); /* Adjust for check button width */
         }
         /* Style Select2 inputs */
         .select2-container--default .select2-selection--single,
@@ -107,6 +109,7 @@
             color: white;
             border: none;
             transition: background-color 0.3s ease;
+            width: 40px; /* Fixed width for consistency */
         }
         .btn-check:hover:not(:disabled) {
             background-color: #218838;
@@ -119,6 +122,7 @@
         .input-group {
             display: flex;
             align-items: center;
+            width: 100%;
         }
         /* Status messages container */
         .status-messages {
@@ -245,7 +249,7 @@
                         <select id="rater-name" class="form-select" data-placeholder="Select Rater" disabled>
                             <option></option>
                         </select>
-                        <button id="rater-check" class="btn-check d-none" disabled title="Confirm selection">
+                        <button id="rater-check" class="btn-check" disabled title="Confirm selection">
                             <i class="bi bi-check-lg"></i>
                         </button>
                     </div>
@@ -259,7 +263,7 @@
                         <select id="agent-name" class="form-select" multiple data-placeholder="Select Agents or All" disabled>
                             <option value="all">All</option>
                         </select>
-                        <button id="agent-check" class="btn-check d-none" disabled title="Confirm selection">
+                        <button id="agent-check" class="btn-check" disabled title="Confirm selection">
                             <i class="bi bi-check-lg"></i>
                         </button>
                     </div>
@@ -316,9 +320,9 @@
                 // Function to add status message with animation
                 function addStatusMessage(text, delay) {
                     setTimeout(() => {
-                        const $2 = $('#status-messages');
+                        const $status = $('#status-messages');
                         const $message = $('<div class="status-message"></div>').text(text);
-                        $2.append($message);
+                        $status.append($message);
                         $message.addClass('active');
                         setTimeout(() => {
                             $message.addClass('fade-out');
@@ -401,17 +405,13 @@
                 let selectedRater = null;
                 let selectedAgents = [];
 
-                // Enable and show check buttons based on selections
+                // Enable check buttons based on selections
                 $raterName.on('change', function () {
                     try {
                         selectedRater = $raterName.val();
                         console.log('Rater selected:', selectedRater); // Debug
-                        // Show and enable check button if rater is selected; hide if none
-                        if (selectedRater) {
-                            $raterCheck.removeClass('d-none').prop('disabled', false);
-                        } else {
-                            $raterCheck.addClass('d-none').prop('disabled', true);
-                        }
+                        // Enable check button if rater is selected
+                        $raterCheck.prop('disabled', !selectedRater);
                     } catch (e) {
                         console.error('Error in rater change handler:', e);
                     }
@@ -421,12 +421,8 @@
                     try {
                         selectedAgents = $agentName.val() || [];
                         console.log('Agents selected:', selectedAgents); // Debug
-                        // Show and enable check button if specific agents are selected; hide if none or 'all'
-                        if (selectedAgents.length && !selectedAgents.includes('all')) {
-                            $agentCheck.removeClass('d-none').prop('disabled', false);
-                        } else {
-                            $agentCheck.addClass('d-none').prop('disabled', true);
-                        }
+                        // Enable check button if specific agents are selected
+                        $agentCheck.prop('disabled', !selectedAgents.length || selectedAgents.includes('all'));
                     } catch (e) {
                         console.error('Error in agent change handler:', e);
                     }
@@ -475,7 +471,7 @@
                             $loadDate.prop('disabled', true);
                             $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
                             $('#date-card').removeClass('card-enabled').addClass('card-disabled');
-                            $agentCheck.addClass('d-none').prop('disabled', true);
+                            $agentCheck.prop('disabled', true);
                             $agentName.removeClass('fade-out explode').addClass('fade-in');
                             $loadDate.removeClass('fade-out explode').addClass('fade-in');
                             setTimeout(() => {
@@ -495,10 +491,9 @@
                                         $agentName.append(new Option(agent, agent, agent === 'all', agent === 'all'));
                                     });
                                     $agentName.trigger('change');
-                                    // Enable Agent Name card and hide Rater Name check button
+                                    // Enable Agent Name card
                                     $agentName.prop('disabled', false);
                                     $('#agent-card').removeClass('card-disabled').addClass('card-enabled');
-                                    $raterCheck.addClass('d-none').prop('disabled', true);
                                     addStatusMessage('Agent names loaded', 500);
                                 },
                                 error: function (xhr) {
@@ -551,10 +546,9 @@
                                         datePicker.set('enable', data);
                                         datePicker.set('disable', past30Days.filter(d => !data.includes(d)));
                                     }
-                                    // Enable Load Date card and hide Agent Name check button
+                                    // Enable Load Date card
                                     $loadDate.prop('disabled', false);
-                                    $('#date-card').removeClass('card-disabled').addClass('card-enabled');
-                                    $agentCheck.addClass('d-none').prop('disabled', true);
+                                    $('#date-card').removeClass('card-enabled').addClass('card-enabled');
                                     addStatusMessage('Dates loaded', 500);
                                 },
                                 error: function (xhr) {
@@ -602,13 +596,13 @@
                                     data: [{ id: 'all', text: 'All', selected: true }],
                                     width: '100%'
                                 });
-                                // Disable Agent Name, Load Date, and hide check buttons
+                                // Disable Agent Name, Load Date, and check buttons
                                 $agentName.prop('disabled', true);
                                 $loadDate.prop('disabled', true);
                                 $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
                                 $('#date-card').removeClass('card-enabled').addClass('card-disabled');
-                                $raterCheck.addClass('d-none').prop('disabled', true);
-                                $agentCheck.addClass('d-none').prop('disabled', true);
+                                $raterCheck.prop('disabled', true);
+                                $agentCheck.prop('disabled', true);
                                 selectedRater = null;
                                 selectedAgents = [];
                                 // Reset animations
@@ -749,7 +743,6 @@
     </script>
 </body>
 </html>
-
 
 
 # Import required libraries for Flask, database, and CSV handling
