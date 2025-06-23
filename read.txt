@@ -321,3 +321,247 @@
 </body>
 
 </html>
+
+To create a Jupyter Notebook with the complete "Day 2: Python Control Flow – Decisions & Loops" script, we need to include both the Markdown content for explanations and the executable Python code snippets for demonstration. Below, I’ll provide a step-by-step structure that you can use to set up your Jupyter Notebook. This will include Markdown cells for the narrative and Code cells for the executable examples. The date and time have been updated to 07:20 PM IST, Monday, June 23, 2025, as per the latest system update.
+
+### How to Set Up in Jupyter Notebook
+1. **Open Jupyter Notebook**: Launch Jupyter Notebook in your browser.
+2. **Create a New Notebook**: Click "New" > "Python 3".
+3. **Add Cells**: Use the provided content to create alternating Markdown and Code cells.
+4. **Copy and Paste**: Paste the content into the respective cell types.
+5. **Run Cells**: Use **Shift + Enter** to render Markdown or execute Code cells.
+
+Below is the full content organized into cells. Each section includes a Markdown cell for explanations and a Code cell for the corresponding code (where applicable). If a section has multiple code examples, they are grouped in separate Code cells.
+
+---
+
+#### Cell 1: Title and Metadata (Markdown)
+```
+# 🧑‍🏫 Day 2: Python Control Flow – Decisions & Loops (Trainer Script for Tech & Data Analysts)
+**🕒 Duration:** 60–75 minutes
+**🎯 Ideal for:** Data analysts, QA testers, junior developers, beginner automation engineers
+**📅 Date and Time:** June 23, 2025, 07:20 PM IST
+```
+
+---
+
+#### Cell 2: Session Objective (Markdown)
+```
+## 🎯 Session Objective
+👨‍🏫 "Welcome back to Day 2 of our Python journey! Yesterday, we saw how to collect, store, and display data. But real-world applications need more than just storage—they need to respond to data. Today we’ll dive into something extremely useful for analysts and developers alike—control flow. This is how we make Python make decisions and perform actions repeatedly. By the end of this session, you'll confidently:
+- Implement conditional logic using if, elif, and else
+- Apply comparison and logical operators to business rules
+- Automate repetitive checks and processing with loops
+- Control loops with break and continue
+- Build logic-driven automation using a real-world support ticket example"
+
+❓ **Engagement Question:** Think of one repetitive task or decision-making step you often do in Excel or SQL. What if Python could do it for you?
+```
+
+---
+
+#### Cell 3: Part 1 - Conditional Statements (Markdown)
+```
+## 🧠 Part 1: Conditional Statements (if, elif, else)
+**Deep Explanation:** Conditional statements let your code choose what to do depending on the data. Think of a conditional like a decision gate. If the condition is true, the gate opens and the code runs. If not, Python looks for the next condition.
+**Insight:** This is just like writing a formula in Excel to classify customers by revenue.
+**Real-World Tech Use Cases:** 
+- Dashboard Classification – Flagging KPIs like bounce rate or churn risk
+- Email Campaign Filters – Targeting high-spending customers
+- Quality Checks – Detecting faulty data or inconsistent reports
+**Trainer Tip:** Ask learners to think: “How would you write logic to classify users based on number of app logins in the last 30 days?”
+```
+
+#### Cell 4: Part 1 - Conditional Statements Code (Code)
+```python
+sales = 98000
+if sales >= 100000:
+    print("Excellent performance")
+elif sales >= 75000:
+    print("Good job")
+elif sales >= 50000:
+    print("Needs improvement")
+else:
+    print("Poor performance")
+```
+
+---
+
+#### Cell 5: Part 2 - Comparison and Logical Operators (Markdown)
+```
+## 🔍 Part 2: Comparison and Logical Operators
+**Deep Explanation:** These operators are the language of decision-making. They let you compare values and combine conditions.
+**Table: Overview**
+| Operator | Meaning         | Example          |
+|----------|-----------------|------------------|
+| ==       | Equal to        | status == "Approved" |
+| !=       | Not equal to    | region != "West"    |
+| >        | Greater than    | price > 500        |
+| <        | Less than       | attempts < 3        |
+| >=       | Greater or equal| score >= 90         |
+| <=       | Less or equal   | quantity <= 100     |
+**Logical Operators:**
+- and: Both must be true
+- or: At least one must be true
+- not: Flips True to False and vice versa
+**Analyst Application:** 
+- Cross-checking user activity + subscription type
+- Validating record completeness + flag status
+**Prompt for Learners:** Write a condition to check if a transaction is over ₹10,000 and made via credit card.
+```
+
+#### Cell 6: Part 2 - Comparison and Logical Operators Code (Code)
+```python
+age = 28
+location = "NY"
+if age >= 25 and location == "NY":
+    print("Send local NY event invite")
+```
+
+---
+
+#### Cell 7: Part 3 - for Loops (Markdown)
+```
+## 🔄 Part 3: for Loops – Repeating Actions Over Data
+**Deep Explanation:** Loops allow you to take one action and repeat it across a list of items. In tech terms: “Apply this logic to every row, every record, or every user.”
+**Tech Use Cases:** 
+- Generating performance reports per department
+- Sending emails to every customer in a filtered list
+- Looping through test cases or log entries
+**Ask Learners:** How could a for loop help you automate a daily report or check?
+```
+
+#### Cell 8: Part 3 - for Loops Code 1 (Code)
+```python
+departments = ["Finance", "HR", "IT"]
+for dept in departments:
+    print("Processing:", dept)
+```
+
+#### Cell 9: Part 3 - for Loops Code 2 (Code)
+```python
+for i in range(1, 4):
+    print("Attempt number:", i)
+```
+
+---
+
+#### Cell 10: Part 4 - while Loops (Markdown)
+```
+## ⏳ Part 4: while Loops – Repeat Until a Condition is Met
+**Deep Explanation:** Unlike for, a while loop doesn’t know how many times it’ll repeat. It keeps running until the condition becomes false. Think of it like checking a status every minute until a job is complete.
+**Avoiding Infinite Loops:** Always make sure the loop eventually stops.
+**Use Case:** 
+- Waiting for valid input
+- Polling a server for job completion
+- Auto-retrying failed database syncs
+```
+
+#### Cell 11: Part 4 - while Loops Code 1 (Code)
+```python
+confirmation = ""
+while confirmation != "yes":
+    confirmation = input("Do you approve this change? (yes/no): ")
+```
+
+#### Cell 12: Part 4 - while Loops Code 2 (Code)
+```python
+while True:
+    print("Stuck forever!")
+```
+
+---
+
+#### Cell 13: Part 5 - Loop Control (Markdown)
+```
+## 🧯 Part 5: Loop Control – break and continue
+**Deep Explanation:** Sometimes, while looping, we want to skip something (continue) or stop altogether (break). Think of break like a fire alarm—it stops everything.
+**Real Case:** 
+- Stop processing a report if a critical metric is missing
+- Skip empty values while looping over a CSV file
+**Prompt:** Think of a task where you would skip or halt when hitting a specific condition.
+```
+
+#### Cell 14: Part 5 - Loop Control Code 1 (Code)
+```python
+records = ["valid", "valid", "error"]
+for record in records:
+    if record == "error":
+        print("Stop: Faulty record")
+        break
+    print("Processing:", record)
+```
+
+#### Cell 15: Part 5 - Loop Control Code 2 (Code)
+```python
+emails = ["abc@example.com", "", "def@example.com"]
+for email in emails:
+    if email == "":
+        continue
+    print("Email sent to:", email)
+```
+
+---
+
+#### Cell 16: Part 6 - Real-World Mini Project (Markdown)
+```
+## 🎮 Part 6: Real-World Mini Project – Flagging Open High-Priority Tickets
+**Scenario:** You are reviewing a list of support tickets. If the ticket is open and high priority, it must be escalated.
+**Key Learnings:** 
+- Looping through data
+- Combining and logic
+- Using string formatting for output
+**Practice Prompt:** Can you modify this to count how many tickets were escalated?
+```
+
+#### Cell 17: Part 6 - Real-World Mini Project Code (Code)
+```python
+tickets = [
+    {"id": 101, "priority": "high", "status": "open"},
+    {"id": 102, "priority": "low", "status": "closed"},
+    {"id": 103, "priority": "high", "status": "closed"},
+    {"id": 104, "priority": "high", "status": "open"}
+]
+
+for ticket in tickets:
+    if ticket["priority"] == "high" and ticket["status"] == "open":
+        print(f"🚨 Ticket {ticket['id']} needs immediate attention!")
+```
+
+---
+
+#### Cell 18: Summary & Best Practices (Markdown)
+```
+## ✅ Summary & Best Practices for Analysts
+**Today’s Learnings:** 
+- Decision logic using if, elif, else
+- Comparing values and combining rules with and, or, not
+- Automating with for and while loops
+- Controlling behavior with break, continue
+- Building scripts that mirror real job tasks like ticket filtering
+**Best Practices:** 
+- Keep loops and conditions clean and readable
+- Use clear variable names (status, priority, threshold)
+- Always test loop logic with small datasets first
+**Challenge Before Day 3:** Try creating a script that flags any transaction over ₹10,000 made by a user from Delhi. Bonus: Count how many such users exist.
+**Coming Up Tomorrow:** Functions in Python – how to organize and reuse your logic like a pro!
+```
+
+---
+
+### Instructions for Jupyter Notebook
+1. **Create the Notebook**: Open Jupyter Notebook and start a new Python 3 notebook.
+2. **Add Cells**: Create 18 cells as outlined above (alternating between Markdown and Code).
+3. **Paste Content**: Copy the content from each section into the corresponding cell type.
+4. **Run the Notebook**:
+   - For Markdown cells, press **Shift + Enter** to render the formatted text.
+   - For Code cells, press **Shift + Enter** to execute the code and see the output (e.g., print statements).
+5. **Save the Notebook**: Use **Ctrl + S** to save your work (e.g., as `Day2_Control_Flow.ipynb`).
+
+### Notes
+- **Order**: The cells follow the sequence from Session Objective to Summary, matching your provided structure.
+- **Executability**: All code snippets are in Code cells and can be run directly in Jupyter Notebook.
+- **Engagement**: Prompts and tips are included in Markdown cells to encourage interaction.
+- **Flexibility**: You can add more Code cells or modify existing ones to experiment with the examples (e.g., modify the ticket escalation code to count tickets).
+
+Let me know if you need help running the notebook or want to add more interactive elements!
