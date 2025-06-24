@@ -206,3 +206,41 @@ if __name__ == '__main__':
                             link TEXT NOT NULL
                         )''')
     app.run(debug=True)
+
+import sqlite3
+
+# Connect to the SQLite database (or create it if it doesn't exist)
+conn = sqlite3.connect('process.db')
+cursor = conn.cursor()
+
+# Create the table if it doesn't already exist
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS process (
+        owner TEXT NOT NULL,
+        name TEXT NOT NULL,
+        link TEXT NOT NULL
+    )
+''')
+
+# Dummy data to insert
+dummy_data = [
+    ('Alice', 'Data Collection', 'https://sharepoint.example.com/video/data-collection'),
+    ('Alice', 'Data Validation', 'https://sharepoint.example.com/video/data-validation'),
+    ('Bob', 'Data Cleaning', 'https://sharepoint.example.com/video/data-cleaning'),
+    ('Bob', 'Transformation Rules', 'https://sharepoint.example.com/video/transformation-rules'),
+    ('Charlie', 'DM Framework Overview', 'https://sharepoint.example.com/video/dm-framework'),
+    ('Charlie', 'Data Pipeline Monitoring', 'https://sharepoint.example.com/video/data-monitoring'),
+    ('Dana', 'Exception Handling', 'https://sharepoint.example.com/video/exception-handling'),
+    ('Dana', 'Dashboard Reports', 'https://sharepoint.example.com/video/dashboard-reports'),
+    ('Eli', 'Client Sync Process', 'https://sharepoint.example.com/video/client-sync'),
+    ('Eli', 'End-to-End DM Flow', 'https://sharepoint.example.com/video/dm-e2e-flow')
+]
+
+# Insert the dummy data
+cursor.executemany('INSERT INTO process (owner, name, link) VALUES (?, ?, ?)', dummy_data)
+
+# Commit changes and close the connection
+conn.commit()
+conn.close()
+
+print("Dummy data inserted successfully.")
