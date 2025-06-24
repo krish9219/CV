@@ -1,8 +1,6 @@
-# Flask Application Code with HTML template embedded in the response
-# File: app.py
-
-from flask import Flask, request, render_template_string, jsonify, g
+from flask import Flask, render_template_string, request, jsonify, g
 import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
 DATABASE = 'process.db'
@@ -20,124 +18,175 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+@app.before_first_request
+def initialize_db():
+    db = get_db()
+    db.execute('''CREATE TABLE IF NOT EXISTS process (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        owner TEXT NOT NULL,
+        name TEXT NOT NULL,
+        link TEXT NOT NULL,
+        status TEXT DEFAULT 'active',
+        last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+    )''')
+    db.commit()
+
 @app.route('/')
 def index():
     db = get_db()
     cur = db.execute('SELECT DISTINCT owner FROM process')
     employees = [row['owner'] for row in cur.fetchall()]
-    cur = db.execute('SELECT rowid, * FROM process')
-    processes = cur.fetchall()
-    return render_template_string(template, employees=employees, processes=processes)
+    return render_template_string(template, employees=employees)
+
+@app.route('/data')
+def fetch_data():
+    status = request.args.get('status')
+    owner = request.args.get('owner')
+    query = 'SELECT * FROM process WHERE 1=1'
+    params = []
+    if owner:
+        query += ' AND owner = ?'
+        params.append(owner)
+    if status:
+        query += ' AND status = ?'
+        params.append(status)
+    db = get_db()
+    cur = db.execute(query, params)
+    rows = [dict(row) for row in cur.fetchall()]
+    return jsonify(rows)
 
 @app.route('/submit', methods=['POST'])
 def submit():
     data = request.get_json()
     db = get_db()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if data.get('id'):
-        db.execute('UPDATE process SET owner = ?, name = ?, link = ? WHERE rowid = ?',
-                   (data['owner'], data['name'], data['link'], data['id']))
+        db.execute('''UPDATE process SET owner=?, name=?, link=?, status=?, last_updated=? WHERE id=?''',
+                   (data['owner'], data['name'], data['link'], data['status'], now, data['id']))
     else:
-        db.execute('INSERT INTO process (owner, name, link) VALUES (?, ?, ?)',
-                   (data['owner'], data['name'], data['link']))
+        db.execute('''INSERT INTO process (owner, name, link, status, last_updated) VALUES (?, ?, ?, ?, ?)''',
+                   (data['owner'], data['name'], data['link'], data['status'], now))
     db.commit()
     return jsonify({'success': True})
 
-@app.route('/filter', methods=['GET'])
-def filter_data():
-    owner = request.args.get('owner')
+@app.route('/archive/<int:pid>', methods=['POST'])
+def archive(pid):
     db = get_db()
-    cur = db.execute('SELECT rowid, * FROM process WHERE owner = ?', (owner,))
-    processes = [dict(row) for row in cur.fetchall()]
-    return jsonify(processes)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db.execute("UPDATE process SET status='archived', last_updated=? WHERE id=?", (now, pid))
+    db.commit()
+    return jsonify({'success': True})
 
 template = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DM Process KTs</title>
   <style>
-    body { background-color: #fff9cc; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-    h1 { text-align: center; color: #333; }
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .card-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    body { background-color: #fff9cc; font-family: Arial; margin: 0; padding: 20px; }
+    .container { max-width: 1280px; margin: auto; }
+    .top-bar { display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px; }
+    .filters { display: flex; gap: 10px; }
+    .card-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
     .card {
-      background: rgba(255, 255, 255, 0.2); border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      padding: 20px; width: 200px; text-align: center;
-      backdrop-filter: blur(10px); transition: transform 0.2s; position: relative;
+      background: rgba(255,255,255,0.2); border-radius: 15px;
+      padding: 20px; position: relative;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3); backdrop-filter: blur(10px);
     }
-    .card:hover { animation: shake 0.5s; animation-iteration-count: 1; }
-    @keyframes shake {
-      0% { transform: translate(1px, 1px) rotate(0deg); }
-      20% { transform: translate(-2px, -2px) rotate(-1deg); }
-      40% { transform: translate(2px, 2px) rotate(1deg); }
-      60% { transform: translate(-1px, -1px) rotate(0deg); }
-      80% { transform: translate(1px, 1px) rotate(1deg); }
-      100% { transform: translate(0px, 0px) rotate(0deg); }
+    .card h3 { margin: 0; font-size: 18px; }
+    .card .meta { font-size: 12px; color: #555; }
+    .status-indicator {
+      display: inline-block; width: 10px; height: 10px;
+      background-color: limegreen; border-radius: 50%;
+      margin-left: 5px; animation: pulse 2s infinite;
     }
-    .btn, .create-btn { background-color: #ffcc00; border: none; border-radius: 10px; padding: 10px 20px; cursor: pointer; }
-    .edit-btn { position: absolute; top: 5px; right: 5px; font-size: 12px; padding: 5px; background: #007bff; color: #fff; border-radius: 6px; }
-    .toast { position: fixed; bottom: 10px; right: 10px; background: green; color: #fff; padding: 10px 20px; border-radius: 8px; display: none; }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.5); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .edit-btn, .delete-btn {
+      position: absolute; top: 5px; border: none; cursor: pointer;
+      padding: 4px 6px; border-radius: 6px; color: white;
+    }
+    .edit-btn { right: 30px; background: #007bff; }
+    .delete-btn { right: 5px; background: crimson; }
+    dialog { width: 400px; max-width: 90vw; padding: 20px; border-radius: 10px; }
+    dialog form input, dialog form select { width: 100%; margin: 10px 0; padding: 8px; }
+    .btn { background: #ffcc00; padding: 8px 15px; border-radius: 10px; border: none; cursor: pointer; }
+    .cancel-btn { background: #aaa; color: white; }
+    .toast {
+      position: fixed; bottom: 10px; right: 10px;
+      background: green; color: white;
+      padding: 10px 20px; border-radius: 8px; display: none;
+    }
+    .pagination { text-align: center; margin-top: 20px; }
+    .pagination button { margin: 0 5px; padding: 5px 10px; }
   </style>
 </head>
 <body>
-  <h1>DM Process KTs</h1>
-  <div class="top-bar">
-    <div>
-      <label>Filter by Employee:</label>
-      <select id="employeeFilter" onchange="filterByEmployee()">
-        <option value="">All</option>
-        {% for emp in employees %}
-          <option value="{{ emp }}">{{ emp }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <button class="create-btn" onclick="openForm()">Create New Card</button>
-  </div>
-  <div id="cardContainer" class="card-container">
-    {% for row in processes %}
-      <div class="card" data-id="{{ row.rowid }}" data-owner="{{ row.owner }}">
-        <button class="edit-btn" onclick="editCard(this)">Edit</button>
-        <h3>{{ row.name }}</h3>
-        <button class="btn" onclick="showVideo('{{ row.link }}')">Click Here</button>
+  <div class="container">
+    <h1>DM Process KTs</h1>
+    <div class="top-bar">
+      <div class="filters">
+        <select id="employeeFilter" onchange="fetchAndRender()">
+          <option value="">All Employees</option>
+          {% for emp in employees %}<option value="{{ emp }}">{{ emp }}</option>{% endfor %}
+        </select>
+        <select id="statusFilter" onchange="fetchAndRender()">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </select>
       </div>
-    {% endfor %}
+      <button class="btn" onclick="openForm()">Create New Card</button>
+    </div>
+
+    <div id="cardContainer" class="card-container"></div>
+    <div class="pagination" id="pagination"></div>
   </div>
 
   <dialog id="formDialog">
     <form onsubmit="return saveCard()">
       <input type="hidden" id="rowId">
-      <label>Process Owner:</label>
+      <label>Owner:</label>
       <input type="text" id="owner" required>
-      <label>Name of the process:</label>
+      <label>Name:</label>
       <input type="text" id="name" required>
-      <label>Video Link:</label>
-      <input type="url" id="link" required>
-      <button type="submit" class="btn">Submit</button>
-      <button type="button" onclick="closeForm()">Cancel</button>
+      <label>Embedded iframe Link:</label>
+      <input type="text" id="link" required>
+      <label>Status:</label>
+      <select id="status">
+        <option value="active">Active</option>
+        <option value="archived">Archived</option>
+      </select>
+      <div style="text-align:right;">
+        <button class="btn" type="submit">Submit</button>
+        <button class="cancel-btn btn" type="button" onclick="closeForm()">Cancel</button>
+      </div>
     </form>
   </dialog>
 
-  <div id="toast" class="toast">Update Successful</div>
+  <div id="toast" class="toast"></div>
 
   <script>
-    function openForm() {
-      document.getElementById('rowId').value = '';
-      document.getElementById('owner').value = '';
-      document.getElementById('name').value = '';
-      document.getElementById('link').value = '';
-      document.getElementById('formDialog').showModal();
+    let allData = [];
+    let page = 1;
+    const perPage = 9;
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 1000);
     }
 
-    function editCard(btn) {
-      const card = btn.closest('.card');
-      document.getElementById('rowId').value = card.dataset.id;
-      document.getElementById('owner').value = card.dataset.owner;
-      document.getElementById('name').value = card.querySelector('h3').innerText;
-      document.getElementById('link').value = card.querySelector('button.btn').getAttribute('onclick').match(/'(.*?)'/)[1];
+    function openForm() {
       document.getElementById('formDialog').showModal();
+    }
+    function closeForm() {
+      document.getElementById('formDialog').close();
     }
 
     function saveCard() {
@@ -145,102 +194,81 @@ template = '''
         id: document.getElementById('rowId').value,
         owner: document.getElementById('owner').value,
         name: document.getElementById('name').value,
-        link: document.getElementById('link').value
+        link: document.getElementById('link').value,
+        status: document.getElementById('status').value
       };
-
       fetch('/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).then(res => res.json()).then(data => {
-        if (data.success) {
-          showToast('Update Successful');
-          window.location.reload();
-        }
+      }).then(r => r.json()).then(d => {
+        showToast("Saved successfully");
+        closeForm();
+        fetchAndRender();
       });
       return false;
     }
 
-    function closeForm() {
-      document.getElementById('formDialog').close();
+    function editCard(item) {
+      document.getElementById('rowId').value = item.id;
+      document.getElementById('owner').value = item.owner;
+      document.getElementById('name').value = item.name;
+      document.getElementById('link').value = item.link;
+      document.getElementById('status').value = item.status;
+      openForm();
     }
 
-    function showVideo(link) {
-      window.open(link, '_blank');
-    }
-
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.style.display = 'block';
-      setTimeout(() => toast.style.display = 'none', 3000);
-    }
-
-    function filterByEmployee() {
-      const emp = document.getElementById('employeeFilter').value;
-      fetch(`/filter?owner=${emp}`)
-        .then(res => res.json())
-        .then(data => {
-          const container = document.getElementById('cardContainer');
-          container.innerHTML = '';
-          data.forEach(row => {
-            container.innerHTML += `
-              <div class="card" data-id="${row.rowid}" data-owner="${row.owner}">
-                <button class="edit-btn" onclick="editCard(this)">Edit</button>
-                <h3>${row.name}</h3>
-                <button class="btn" onclick="showVideo('${row.link}')">Click Here</button>
-              </div>`;
+    function archiveCard(id) {
+      if (confirm("Archive this card?")) {
+        fetch(`/archive/${id}`, { method: 'POST' })
+          .then(r => r.json()).then(() => {
+            showToast("Archived");
+            fetchAndRender();
           });
-        });
+      }
     }
+
+    function renderCards() {
+      const container = document.getElementById('cardContainer');
+      container.innerHTML = '';
+      const start = (page - 1) * perPage;
+      const end = Math.min(start + perPage, allData.length);
+      for (let i = start; i < end; i++) {
+        const d = allData[i];
+        container.innerHTML += `
+          <div class='card'>
+            <button class='edit-btn' onclick='editCard(${JSON.stringify(d)})'>✏️</button>
+            <button class='delete-btn' onclick='archiveCard(${d.id})'>❌</button>
+            <h3>${d.name} ${d.status === 'active' ? '<span class="status-indicator"></span>' : ''}</h3>
+            <div class='meta'>Owner: ${d.owner}<br>Updated: ${d.last_updated}</div>
+            <div>${d.link}</div>
+          </div>`;
+      }
+      renderPagination();
+    }
+
+    function renderPagination() {
+      const total = Math.ceil(allData.length / perPage);
+      const pag = document.getElementById('pagination');
+      pag.innerHTML = '';
+      for (let i = 1; i <= total; i++) {
+        pag.innerHTML += `<button onclick='page=${i};renderCards()'>${i}</button>`;
+      }
+    }
+
+    function fetchAndRender() {
+      const owner = document.getElementById('employeeFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      fetch(`/data?owner=${owner}&status=${status}`)
+        .then(r => r.json())
+        .then(data => { allData = data; page = 1; renderCards(); });
+    }
+
+    fetchAndRender();
   </script>
 </body>
 </html>
 '''
 
 if __name__ == '__main__':
-    with sqlite3.connect(DATABASE) as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS process (
-                            owner TEXT NOT NULL,
-                            name TEXT NOT NULL,
-                            link TEXT NOT NULL
-                        )''')
     app.run(debug=True)
-
-import sqlite3
-
-# Connect to the SQLite database (or create it if it doesn't exist)
-conn = sqlite3.connect('process.db')
-cursor = conn.cursor()
-
-# Create the table if it doesn't already exist
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS process (
-        owner TEXT NOT NULL,
-        name TEXT NOT NULL,
-        link TEXT NOT NULL
-    )
-''')
-
-# Dummy data to insert
-dummy_data = [
-    ('Alice', 'Data Collection', 'https://sharepoint.example.com/video/data-collection'),
-    ('Alice', 'Data Validation', 'https://sharepoint.example.com/video/data-validation'),
-    ('Bob', 'Data Cleaning', 'https://sharepoint.example.com/video/data-cleaning'),
-    ('Bob', 'Transformation Rules', 'https://sharepoint.example.com/video/transformation-rules'),
-    ('Charlie', 'DM Framework Overview', 'https://sharepoint.example.com/video/dm-framework'),
-    ('Charlie', 'Data Pipeline Monitoring', 'https://sharepoint.example.com/video/data-monitoring'),
-    ('Dana', 'Exception Handling', 'https://sharepoint.example.com/video/exception-handling'),
-    ('Dana', 'Dashboard Reports', 'https://sharepoint.example.com/video/dashboard-reports'),
-    ('Eli', 'Client Sync Process', 'https://sharepoint.example.com/video/client-sync'),
-    ('Eli', 'End-to-End DM Flow', 'https://sharepoint.example.com/video/dm-e2e-flow')
-]
-
-# Insert the dummy data
-cursor.executemany('INSERT INTO process (owner, name, link) VALUES (?, ?, ?)', dummy_data)
-
-# Commit changes and close the connection
-conn.commit()
-conn.close()
-
-print("Dummy data inserted successfully.")
