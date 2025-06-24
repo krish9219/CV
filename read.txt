@@ -1,567 +1,208 @@
+# Flask Application Code with HTML template embedded in the response
+# File: app.py
+
+from flask import Flask, request, render_template_string, jsonify, g
+import sqlite3
+
+app = Flask(__name__)
+DATABASE = 'process.db'
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DATABASE)
+    db.row_factory = sqlite3.Row
+    return db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+@app.route('/')
+def index():
+    db = get_db()
+    cur = db.execute('SELECT DISTINCT owner FROM process')
+    employees = [row['owner'] for row in cur.fetchall()]
+    cur = db.execute('SELECT rowid, * FROM process')
+    processes = cur.fetchall()
+    return render_template_string(template, employees=employees, processes=processes)
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    data = request.get_json()
+    db = get_db()
+    if data.get('id'):
+        db.execute('UPDATE process SET owner = ?, name = ?, link = ? WHERE rowid = ?',
+                   (data['owner'], data['name'], data['link'], data['id']))
+    else:
+        db.execute('INSERT INTO process (owner, name, link) VALUES (?, ?, ?)',
+                   (data['owner'], data['name'], data['link']))
+    db.commit()
+    return jsonify({'success': True})
+
+@app.route('/filter', methods=['GET'])
+def filter_data():
+    owner = request.args.get('owner')
+    db = get_db()
+    cur = db.execute('SELECT rowid, * FROM process WHERE owner = ?', (owner,))
+    processes = [dict(row) for row in cur.fetchall()]
+    return jsonify(processes)
+
+template = '''
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Aravind Pilla</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DM Process KTs</title>
+  <style>
+    body { background-color: #fff9cc; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .card-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    .card {
+      background: rgba(255, 255, 255, 0.2); border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      padding: 20px; width: 200px; text-align: center;
+      backdrop-filter: blur(10px); transition: transform 0.2s; position: relative;
+    }
+    .card:hover { animation: shake 0.5s; animation-iteration-count: 1; }
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      20% { transform: translate(-2px, -2px) rotate(-1deg); }
+      40% { transform: translate(2px, 2px) rotate(1deg); }
+      60% { transform: translate(-1px, -1px) rotate(0deg); }
+      80% { transform: translate(1px, 1px) rotate(1deg); }
+      100% { transform: translate(0px, 0px) rotate(0deg); }
+    }
+    .btn, .create-btn { background-color: #ffcc00; border: none; border-radius: 10px; padding: 10px 20px; cursor: pointer; }
+    .edit-btn { position: absolute; top: 5px; right: 5px; font-size: 12px; padding: 5px; background: #007bff; color: #fff; border-radius: 6px; }
+    .toast { position: fixed; bottom: 10px; right: 10px; background: green; color: #fff; padding: 10px 20px; border-radius: 8px; display: none; }
+  </style>
 </head>
-
 <body>
-  <center>
-    <h1>Aravind Pilla</h1>
-    <!-- <img src="Images/aravind.png" alt="Image is not supported by your browser" height="200" width="180"> -->
-    <table height=60% width=100%>
-      <tr bgcolor='lightblue'>
-        <th>
-          <h3><strong>Machine Learning Engineer and Certified Data Science & AI Professional</strong></h3>
-        </th>
-      </tr>
-    </table>
-
-    <table>
-      <tr>
-        <td>📱 +91 7660047229 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 📧 aravind.engineer001@gmail.com &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 📌 Hyderabad, India &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 🔗 <a href="https://github.com/krish9219">https://github.com/krish9219</a>
-        </td>
-      </tr>
-    </table>
-
-  </center>
-
-  <hr>
-
-
-  <table>
-    <th align='left'>
-      <h3>Summary</h3><br>
-    </th>
-    <tr>
-      <td>
-        4+ years experienced in Analytics with passion to solve real-world business challanges. Proficient
-        in deploying complex modeling Algorithms/Techniques and extracting valuable insights for key
-        stakeholders and organizational leadership.
-      </td>
-    </tr>
-  </table>
-  <br>
-
-
-  <hr size=5 noshade>
-
-  <div id='Education'>
-
-
-    <table height=100%, width=100%>
-      <tr>
-        <th align='left'>
-          <h3>EDUCATION</h3>
-        </th>
-      </tr>
-      <tr>
-        <td>
-          <table>
-            <tr>
-              <th align='left'>
-                B-Tech Mechanical Engineering <br>
-              </th>
-            </tr>
-            <tr>
-              <td><br></td>
-            </tr>
-            <tr>
-              <td rowspan=2>
-                Sanketika Institute of Technology and Management <br><br>
-                <em>Got 70.01 %</em>
-              </td>
-            </tr>
-          </table>
-
-          <br><br>
-
-          <table>
-            <tr>
-              <th align='left'>
-                Intermediate (+2) <br>
-              </th>
-            </tr>
-            <tr>
-              <td><br></td>
-            </tr>
-            <tr>
-              <td rowspan=2>
-                Sri Chaitanya Junior College <br><br>
-                <em>Got 84.00 %</em>
-              </td>
-            </tr>
-
-          </table>
-        </td>
-
-        <td align='right'>
-          <table>
-            <tr>
-              <td rowspan="2">
-                📅 Jul'10 - May'14 <br><br>
-                Visakhapatnam, IN.
-              </td>
-            </tr>
-          </table>
-
-          <br><br>
-
-          <table>
-            <tr>
-              <td rowspan="2">
-                📅 Jul'08 - May'10 <br><br>
-                Visakhapatnam, IN.
-              </td>
-            </tr>
-          </table>
-        </td>
-    </table>
-    <br>
+  <h1>DM Process KTs</h1>
+  <div class="top-bar">
+    <div>
+      <label>Filter by Employee:</label>
+      <select id="employeeFilter" onchange="filterByEmployee()">
+        <option value="">All</option>
+        {% for emp in employees %}
+          <option value="{{ emp }}">{{ emp }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="create-btn" onclick="openForm()">Create New Card</button>
+  </div>
+  <div id="cardContainer" class="card-container">
+    {% for row in processes %}
+      <div class="card" data-id="{{ row.rowid }}" data-owner="{{ row.owner }}">
+        <button class="edit-btn" onclick="editCard(this)">Edit</button>
+        <h3>{{ row.name }}</h3>
+        <button class="btn" onclick="showVideo('{{ row.link }}')">Click Here</button>
+      </div>
+    {% endfor %}
   </div>
 
-  <hr size=5 noshade>
+  <dialog id="formDialog">
+    <form onsubmit="return saveCard()">
+      <input type="hidden" id="rowId">
+      <label>Process Owner:</label>
+      <input type="text" id="owner" required>
+      <label>Name of the process:</label>
+      <input type="text" id="name" required>
+      <label>Video Link:</label>
+      <input type="url" id="link" required>
+      <button type="submit" class="btn">Submit</button>
+      <button type="button" onclick="closeForm()">Cancel</button>
+    </form>
+  </dialog>
 
-  <div id='ks'>
-    <table>
-      <tr>
-        <th colspan="15" align='left'>
-          <h3>KEY SKILLS</h3>
-        </th>
-      </tr>
-      <tr>
-        <ul>
-          <td>
-            <li>Data Analysis</li>
-          </td>
-          <td><br></td>
-          <td>
-            <li>Leadership & Training</li>
-          </td>
-          <td><br></td>
-      <tr>
-        <td>
-          <li>Strategy</li>
-        </td>
-        <td><br></td>
-        <td>
-          <li>Project Management & Delivery</li>
-        </td>
-        <td><br></td>
-      </tr>
+  <div id="toast" class="toast">Update Successful</div>
 
-      <tr>
-        <td>
-          <li>Process Improvement</li>
-        </td>
-        <td><br></br></td>
-        <td>
-          <li>Data Visualization</li>
-        </td>
-        <td><br></td>
-      </tr>
+  <script>
+    function openForm() {
+      document.getElementById('rowId').value = '';
+      document.getElementById('owner').value = '';
+      document.getElementById('name').value = '';
+      document.getElementById('link').value = '';
+      document.getElementById('formDialog').showModal();
+    }
 
-      <tr>
-        <td>
-          <li>Prodective Modelling & Analytics</li>
-        </td>
-        <td><br></td>
-        <td>
-          <li>Sentiment Analysis</li>
-        </td>
-      </tr>
-      </ul>
-      </tr>
-    </table>
-  </div>
+    function editCard(btn) {
+      const card = btn.closest('.card');
+      document.getElementById('rowId').value = card.dataset.id;
+      document.getElementById('owner').value = card.dataset.owner;
+      document.getElementById('name').value = card.querySelector('h3').innerText;
+      document.getElementById('link').value = card.querySelector('button.btn').getAttribute('onclick').match(/'(.*?)'/)[1];
+      document.getElementById('formDialog').showModal();
+    }
 
+    function saveCard() {
+      const payload = {
+        id: document.getElementById('rowId').value,
+        owner: document.getElementById('owner').value,
+        name: document.getElementById('name').value,
+        link: document.getElementById('link').value
+      };
 
-  <br>
+      fetch('/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(res => res.json()).then(data => {
+        if (data.success) {
+          showToast('Update Successful');
+          window.location.reload();
+        }
+      });
+      return false;
+    }
 
-  <hr size=5 noshade>
+    function closeForm() {
+      document.getElementById('formDialog').close();
+    }
 
-  <div id='ts'>
-    <table>
-      <th align='left'><h3>TECHNICAL SKILLS</h3></th>
-      <tr>
-        <td>
-          <ul>
-            <li><strong>Packages: </strong> &nbsp Scikit-Learn, NumPy, SciPy, Plotly, Tensorflow, Keras, Pandas, NLTK, Beautiful Soup, Matplotlib, StatsModels, Flask, Selenium WebDriver</li>
-            <br>
-            <li><strong>Statistics/ML: </strong>&nbsp Linear/Logistic Regression, SVM, Ensemble, Trees, Random Forest, Clustering, Gradient Boosted trees</li>
-            <br>
-            <li><strong>Programming/Softwares: </strong>&nbsp Python, SAS, R, Tableau, HTML&CSS, JavaScript, Node.js and React.js, SAS DI Studios</li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-  </div>
+    function showVideo(link) {
+      window.open(link, '_blank');
+    }
 
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3000);
+    }
 
-
-  <hr size=5 noshade>
-
-  <div id='certification'>
-    <table>
-      <th align='left'><h3>CERTIFICATIONS</h3></th>
-      <tr>
-        <td>
-          <ul>
-            <li>Certified Data Science & AI Professional | Edvancer Eduventers | Aug'18 - Jun'19</li>
-            <br>
-            <li>Web Development BootCamp 2020 | Udemy | Jul'20</li>
-            <br>
-            <li>Selenium Web Automation | Udemy | Aug'20</li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-
-
-  </div>
-
-
-  <hr size=5 noshade>
-
-  <div id="projects">
-
-    <table>
-      <tr>
-        <th align='left'><h3>KEY DATA SCIENCE PROJECTS</h3></th>
-      </tr>
-      <tr>
-        <td>
-          <h4>Stack Overflow Tag Prediction</h4>
-          <ul>
-            <li><em>Objective</em> : &nbsp Tagging stack overflow questions with topics given the question text.</li>
-            <br>
-            <li><em>Tech Stack</em>:&nbsp Python</li>
-            <br>
-            <li><em>Solution</em>:&nbsp Huge amount of data and variety in the context of words led us to use deep learning models instead of simply BOW features based ML models . LSTM with Glove embeddings gave us 0.6 F1 Score on validation set.</li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-      <br>
-      <tr>
-        <td>
-          <h4>Distracted Driver Detection</h4>
-          <ul>
-            <li>Distracted Driver Detection : An image classification project done with deep learning models. Solution and details hosted on git-hub : <a href="https://github.com/krish9219/Distracted-Driver-Detection-using-deep-CNN">Git Hub link</a> </li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <hr size=5 noshade>
-
-  <div id="experience">
-    <table>
-      <tr>
-        <td>
-          <h3>PROFESSIONAL EXPERIENCE</h3>
-          <h4>Senior Analyst</h4>
-          <h4>Synchrony Internationals Pvt. Ltd. - &nbsp&nbsp&nbsp 📅&nbsp&nbsp&nbsp Sep'20 - Present</h4>
-
-          <em>Technology Stack : &nbsp Python, SAS, Tableau, SQL, Pyspark, Web Automation
-          </em>
-          <ul>
-            <li>Data Management using <strong>SAS, Python</strong></li>
-            <br>
-            <li>Data Visualisation using <strong>Tableau</strong></li>
-            <br>
-            <li>Data Warehouse testings and validations</li>
-            <br>
-            <li>Web application developments for Clients using <strong>Flask</strong></li>
-            <br>
-            <li>Pulling Data from EDL using <strong>Pyspark</strong></li>
-            <br>
-            <li>Web Automation usind <strong>Selenium</strong></li>
-            <br>
-          </ul>
-          
-          <h4>Machine Learning Enginer</h4>
-          <h4>Sysark Datasol Pvt Ltd. - &nbsp&nbsp&nbsp 📅 &nbsp&nbsp&nbsp May'16 - Sep'20</h4>
-
-          <em>Technology Stack : &nbsp Python, Tableau, SQL </em>
-          <ul>
-            <li>Steering rapid model creation in Python using Pandas, NumPy, SciKit-Learn & plot.ly for data visualization</li>
-            <br>
-            <li>Deploying ridge regression model & LASSO solver via gradient descentt to select the regularization parameters</li>
-            <br>
-            <li>Creating NLP models for <strong>Sentiment Analysis</strong></li>
-            <br>
-          </ul>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <hr size=5 noshade>
-<div id="information">
-<table>
-  <tr>
-    <td>
-      <h3>ADDITIONAL INFORMATION</h3>
-      <ul>
-        <li><strong>Languages</strong>: &nbsp English, Telugu & Hindi</li>
-        <br>
-      </ul>
-    </td>
-  </tr>
-</table>
-</div>
-
-
+    function filterByEmployee() {
+      const emp = document.getElementById('employeeFilter').value;
+      fetch(`/filter?owner=${emp}`)
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById('cardContainer');
+          container.innerHTML = '';
+          data.forEach(row => {
+            container.innerHTML += `
+              <div class="card" data-id="${row.rowid}" data-owner="${row.owner}">
+                <button class="edit-btn" onclick="editCard(this)">Edit</button>
+                <h3>${row.name}</h3>
+                <button class="btn" onclick="showVideo('${row.link}')">Click Here</button>
+              </div>`;
+          });
+        });
+    }
+  </script>
 </body>
-
 </html>
+'''
 
-To create a Jupyter Notebook with the complete "Day 2: Python Control Flow – Decisions & Loops" script, we need to include both the Markdown content for explanations and the executable Python code snippets for demonstration. Below, I’ll provide a step-by-step structure that you can use to set up your Jupyter Notebook. This will include Markdown cells for the narrative and Code cells for the executable examples. The date and time have been updated to 07:20 PM IST, Monday, June 23, 2025, as per the latest system update.
-
-### How to Set Up in Jupyter Notebook
-1. **Open Jupyter Notebook**: Launch Jupyter Notebook in your browser.
-2. **Create a New Notebook**: Click "New" > "Python 3".
-3. **Add Cells**: Use the provided content to create alternating Markdown and Code cells.
-4. **Copy and Paste**: Paste the content into the respective cell types.
-5. **Run Cells**: Use **Shift + Enter** to render Markdown or execute Code cells.
-
-Below is the full content organized into cells. Each section includes a Markdown cell for explanations and a Code cell for the corresponding code (where applicable). If a section has multiple code examples, they are grouped in separate Code cells.
-
----
-
-#### Cell 1: Title and Metadata (Markdown)
-```
-# 🧑‍🏫 Day 2: Python Control Flow – Decisions & Loops (Trainer Script for Tech & Data Analysts)
-**🕒 Duration:** 60–75 minutes
-**🎯 Ideal for:** Data analysts, QA testers, junior developers, beginner automation engineers
-**📅 Date and Time:** June 23, 2025, 07:20 PM IST
-```
-
----
-
-#### Cell 2: Session Objective (Markdown)
-```
-## 🎯 Session Objective
-👨‍🏫 "Welcome back to Day 2 of our Python journey! Yesterday, we saw how to collect, store, and display data. But real-world applications need more than just storage—they need to respond to data. Today we’ll dive into something extremely useful for analysts and developers alike—control flow. This is how we make Python make decisions and perform actions repeatedly. By the end of this session, you'll confidently:
-- Implement conditional logic using if, elif, and else
-- Apply comparison and logical operators to business rules
-- Automate repetitive checks and processing with loops
-- Control loops with break and continue
-- Build logic-driven automation using a real-world support ticket example"
-
-❓ **Engagement Question:** Think of one repetitive task or decision-making step you often do in Excel or SQL. What if Python could do it for you?
-```
-
----
-
-#### Cell 3: Part 1 - Conditional Statements (Markdown)
-```
-## 🧠 Part 1: Conditional Statements (if, elif, else)
-**Deep Explanation:** Conditional statements let your code choose what to do depending on the data. Think of a conditional like a decision gate. If the condition is true, the gate opens and the code runs. If not, Python looks for the next condition.
-**Insight:** This is just like writing a formula in Excel to classify customers by revenue.
-**Real-World Tech Use Cases:** 
-- Dashboard Classification – Flagging KPIs like bounce rate or churn risk
-- Email Campaign Filters – Targeting high-spending customers
-- Quality Checks – Detecting faulty data or inconsistent reports
-**Trainer Tip:** Ask learners to think: “How would you write logic to classify users based on number of app logins in the last 30 days?”
-```
-
-#### Cell 4: Part 1 - Conditional Statements Code (Code)
-```python
-sales = 98000
-if sales >= 100000:
-    print("Excellent performance")
-elif sales >= 75000:
-    print("Good job")
-elif sales >= 50000:
-    print("Needs improvement")
-else:
-    print("Poor performance")
-```
-
----
-
-#### Cell 5: Part 2 - Comparison and Logical Operators (Markdown)
-```
-## 🔍 Part 2: Comparison and Logical Operators
-**Deep Explanation:** These operators are the language of decision-making. They let you compare values and combine conditions.
-**Table: Overview**
-| Operator | Meaning         | Example          |
-|----------|-----------------|------------------|
-| ==       | Equal to        | status == "Approved" |
-| !=       | Not equal to    | region != "West"    |
-| >        | Greater than    | price > 500        |
-| <        | Less than       | attempts < 3        |
-| >=       | Greater or equal| score >= 90         |
-| <=       | Less or equal   | quantity <= 100     |
-**Logical Operators:**
-- and: Both must be true
-- or: At least one must be true
-- not: Flips True to False and vice versa
-**Analyst Application:** 
-- Cross-checking user activity + subscription type
-- Validating record completeness + flag status
-**Prompt for Learners:** Write a condition to check if a transaction is over ₹10,000 and made via credit card.
-```
-
-#### Cell 6: Part 2 - Comparison and Logical Operators Code (Code)
-```python
-age = 28
-location = "NY"
-if age >= 25 and location == "NY":
-    print("Send local NY event invite")
-```
-
----
-
-#### Cell 7: Part 3 - for Loops (Markdown)
-```
-## 🔄 Part 3: for Loops – Repeating Actions Over Data
-**Deep Explanation:** Loops allow you to take one action and repeat it across a list of items. In tech terms: “Apply this logic to every row, every record, or every user.”
-**Tech Use Cases:** 
-- Generating performance reports per department
-- Sending emails to every customer in a filtered list
-- Looping through test cases or log entries
-**Ask Learners:** How could a for loop help you automate a daily report or check?
-```
-
-#### Cell 8: Part 3 - for Loops Code 1 (Code)
-```python
-departments = ["Finance", "HR", "IT"]
-for dept in departments:
-    print("Processing:", dept)
-```
-
-#### Cell 9: Part 3 - for Loops Code 2 (Code)
-```python
-for i in range(1, 4):
-    print("Attempt number:", i)
-```
-
----
-
-#### Cell 10: Part 4 - while Loops (Markdown)
-```
-## ⏳ Part 4: while Loops – Repeat Until a Condition is Met
-**Deep Explanation:** Unlike for, a while loop doesn’t know how many times it’ll repeat. It keeps running until the condition becomes false. Think of it like checking a status every minute until a job is complete.
-**Avoiding Infinite Loops:** Always make sure the loop eventually stops.
-**Use Case:** 
-- Waiting for valid input
-- Polling a server for job completion
-- Auto-retrying failed database syncs
-```
-
-#### Cell 11: Part 4 - while Loops Code 1 (Code)
-```python
-confirmation = ""
-while confirmation != "yes":
-    confirmation = input("Do you approve this change? (yes/no): ")
-```
-
-#### Cell 12: Part 4 - while Loops Code 2 (Code)
-```python
-while True:
-    print("Stuck forever!")
-```
-
----
-
-#### Cell 13: Part 5 - Loop Control (Markdown)
-```
-## 🧯 Part 5: Loop Control – break and continue
-**Deep Explanation:** Sometimes, while looping, we want to skip something (continue) or stop altogether (break). Think of break like a fire alarm—it stops everything.
-**Real Case:** 
-- Stop processing a report if a critical metric is missing
-- Skip empty values while looping over a CSV file
-**Prompt:** Think of a task where you would skip or halt when hitting a specific condition.
-```
-
-#### Cell 14: Part 5 - Loop Control Code 1 (Code)
-```python
-records = ["valid", "valid", "error"]
-for record in records:
-    if record == "error":
-        print("Stop: Faulty record")
-        break
-    print("Processing:", record)
-```
-
-#### Cell 15: Part 5 - Loop Control Code 2 (Code)
-```python
-emails = ["abc@example.com", "", "def@example.com"]
-for email in emails:
-    if email == "":
-        continue
-    print("Email sent to:", email)
-```
-
----
-
-#### Cell 16: Part 6 - Real-World Mini Project (Markdown)
-```
-## 🎮 Part 6: Real-World Mini Project – Flagging Open High-Priority Tickets
-**Scenario:** You are reviewing a list of support tickets. If the ticket is open and high priority, it must be escalated.
-**Key Learnings:** 
-- Looping through data
-- Combining and logic
-- Using string formatting for output
-**Practice Prompt:** Can you modify this to count how many tickets were escalated?
-```
-
-#### Cell 17: Part 6 - Real-World Mini Project Code (Code)
-```python
-tickets = [
-    {"id": 101, "priority": "high", "status": "open"},
-    {"id": 102, "priority": "low", "status": "closed"},
-    {"id": 103, "priority": "high", "status": "closed"},
-    {"id": 104, "priority": "high", "status": "open"}
-]
-
-for ticket in tickets:
-    if ticket["priority"] == "high" and ticket["status"] == "open":
-        print(f"🚨 Ticket {ticket['id']} needs immediate attention!")
-```
-
----
-
-#### Cell 18: Summary & Best Practices (Markdown)
-```
-## ✅ Summary & Best Practices for Analysts
-**Today’s Learnings:** 
-- Decision logic using if, elif, else
-- Comparing values and combining rules with and, or, not
-- Automating with for and while loops
-- Controlling behavior with break, continue
-- Building scripts that mirror real job tasks like ticket filtering
-**Best Practices:** 
-- Keep loops and conditions clean and readable
-- Use clear variable names (status, priority, threshold)
-- Always test loop logic with small datasets first
-**Challenge Before Day 3:** Try creating a script that flags any transaction over ₹10,000 made by a user from Delhi. Bonus: Count how many such users exist.
-**Coming Up Tomorrow:** Functions in Python – how to organize and reuse your logic like a pro!
-```
-
----
-
-### Instructions for Jupyter Notebook
-1. **Create the Notebook**: Open Jupyter Notebook and start a new Python 3 notebook.
-2. **Add Cells**: Create 18 cells as outlined above (alternating between Markdown and Code).
-3. **Paste Content**: Copy the content from each section into the corresponding cell type.
-4. **Run the Notebook**:
-   - For Markdown cells, press **Shift + Enter** to render the formatted text.
-   - For Code cells, press **Shift + Enter** to execute the code and see the output (e.g., print statements).
-5. **Save the Notebook**: Use **Ctrl + S** to save your work (e.g., as `Day2_Control_Flow.ipynb`).
-
-### Notes
-- **Order**: The cells follow the sequence from Session Objective to Summary, matching your provided structure.
-- **Executability**: All code snippets are in Code cells and can be run directly in Jupyter Notebook.
-- **Engagement**: Prompts and tips are included in Markdown cells to encourage interaction.
-- **Flexibility**: You can add more Code cells or modify existing ones to experiment with the examples (e.g., modify the ticket escalation code to count tickets).
-
-Let me know if you need help running the notebook or want to add more interactive elements!
+if __name__ == '__main__':
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS process (
+                            owner TEXT NOT NULL,
+                            name TEXT NOT NULL,
+                            link TEXT NOT NULL
+                        )''')
+    app.run(debug=True)
