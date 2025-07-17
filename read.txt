@@ -1,1 +1,1666 @@
-under development 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CQMT RANDOM SAMPLES</title>
+    <!-- Bootstrap CSS for styling and layout -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Select2 CSS for searchable dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <!-- flatpickr CSS for date picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <style>
+        /* General body styling with light yellow background */
+        body {
+            background-color: #FFF9E6;
+            font-family: 'Inter', Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        /* Container for vertical middle alignment with border */
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            border: 1px solid #ccc; /* Border around container */
+            border-radius: 8px; /* Rounded corners for aesthetics */
+        }
+        /* Card styling with 3D effect for inputs */
+        .card-3d {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            margin-bottom: 20px;
+            min-height: 120px; /* Ensure consistent card height */
+        }
+        /* Hover effect for cards */
+        .card-3d:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+        /* Glow animation for enabled cards (green for non-current) */
+        .card-enabled {
+            animation: glow-green 1.5s ease-in-out infinite alternate;
+        }
+        /* Blue glow for the current (latest) card */
+        .card-current {
+            animation: glow-blue 1.5s ease-in-out infinite alternate;
+        }
+        /* Fade effect for disabled cards */
+        .card-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            animation: fadeDisable 0.5s ease;
+        }
+        /* Ensure Select2 dropdowns span full width minus update button, except for Agent Name */
+        .select2-container {
+            width: 100% !important;
+            flex-grow: 1;
+            max-width: calc(100% - 80px); /* Adjust for 70px button + 10px gap */
+        }
+        /* Full width for Agent Name select */
+        .select2-container.agent-name-select {
+            max-width: 100% !important; /* Full width for Agent Name */
+        }
+        /* Style Select2 inputs */
+        .select2-container--default .select2-selection--single,
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 8px;
+            min-height: 38px;
+        }
+        .select2-selection__rendered {
+            line-height: 22px !important;
+        }
+        /* Style date inputs */
+        .date-input {
+            white-space: nowrap;
+            resize: none;
+            min-height: 38px;
+            line-height: 1.5;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 150px; /* Limit width for date inputs in single row */
+        }
+        /* Style buttons with 3D effect */
+        .btn-clear, .btn-submit {
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .btn-clear:hover, .btn-submit:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+        }
+        .btn-clear:active, .btn-submit:active {
+            transform: translateZ(-8px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        /* Style update buttons */
+        .btn-update {
+            display: inline-block !important;
+            visibility: visible;
+            padding: 8px 12px;
+            margin-left: 10px; /* Ensure 10px gap from input */
+            border-radius: 4px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            transition: background-color 0.3s ease;
+            width: 70px;
+            min-width: 70px;
+            height: 38px;
+            line-height: 1;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1;
+        }
+        .btn-update:hover:not(:disabled) {
+            background-color: #218838;
+        }
+        .btn-update:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        /* Input group for aligning inputs and buttons */
+        .input-group {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            overflow: visible;
+        }
+        /* Ensure 10px gap between inputs/selects and Update button */
+        .input-group select.form-select, .input-group input.date-input {
+            margin-right: 10px;
+        }
+        .input-group > * {
+            flex-shrink: 0;
+        }
+        /* Date range specific styling for single row */
+        .date-range-group {
+            display: flex;
+            align-items: flex-end; /* Align inputs and button at bottom */
+            gap: 10px; /* Gap between Start Date, End Date, and Update button */
+        }
+        /* Style for date input containers to stack labels above inputs */
+        .date-input-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1; /* Equal width for Start/End Date inputs */
+        }
+        /* Status messages container */
+        .status-messages {
+            min-height: 38px;
+            max-height: 38px;
+            overflow: hidden;
+            text-align: center; /* Center-align status messages */
+            position: relative;
+            flex-grow: 1;
+            margin: 0 10px; /* Space between buttons */
+        }
+        .status-message {
+            position: absolute;
+            width: 100%;
+            text-align: center; /* Ensure messages are centered */
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .status-message.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .status-message.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        /* Style tooltips */
+        .tooltip-inner {
+            background: linear-gradient(45deg, #333, #555);
+            color: white;
+            font-size: 14px;
+            padding: 10px;
+            border-radius: 6px;
+            opacity: 0.95;
+        }
+        .tooltip.bs-tooltip-top .tooltip-arrow::before {
+            border-top-color: #333;
+        }
+        .tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+            border-bottom-color: #333;
+        }
+        /* Progress overlay styling */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .progress-bar {
+            width: 0;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 3px;
+            transition: width 0.1s ease;
+        }
+        .progress-text {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 10px;
+            opacity: 0; /* Hide by default */
+            transition: opacity 0.3s ease; /* Smooth show/hide */
+        }
+        .progress-text.visible {
+            opacity: 1; /* Show when visible class added */
+        }
+        /* Ensure overlay is hidden by default */
+        .overlay.hidden {
+            display: none;
+        }
+        /* Animation keyframes */
+        .fade-out {
+            animation: fadeOut 0.5s ease forwards;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        .explode {
+            animation: explode 0.5s ease forwards;
+        }
+        .pulse {
+            animation: pulse 0.6s ease infinite;
+        }
+        /* Green glow for enabled non-current cards */
+        @keyframes glow-green {
+            from { box-shadow: 0 0 5px #4CAF50; }
+            to { box-shadow: 0 0 15px #4CAF50; }
+        }
+        /* Blue glow for the current card */
+        @keyframes glow-blue {
+            from { box-shadow: 0 0 5px #00B7EB; }
+            to { box-shadow: 0 0 15px #00B7EB; }
+        }
+        @keyframes fadeDisable {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes explode {
+            from { transform: scale(1) rotate(0deg); opacity: 1; }
+            to { transform: scale(1.5) rotate(15deg); opacity: 0; }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Page title with increased margin for spacing -->
+        <h1 class="text-center mb-5">CQMT RANDOM SAMPLES</h1>
+        <!-- First row: Function and Load Date Range cards -->
+        <div class="row justify-content-center">
+            <!-- Function input card: Only visible card initially -->
+            <div class="col-md-6" id="function-card-container">
+                <div class="card-3d card-disabled" id="function-card" data-bs-toggle="tooltip" title="Select a function">
+                    <label for="function" class="form-label">Function</label>
+                    <div class="input-group">
+                        <select id="function" class="form-select" data-placeholder="Select Function" disabled>
+                            <option></option>
+                        </select>
+                        <button id="function-update" class="btn-update" disabled title="Update selection">Update</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Load Date Range input card: Hidden initially, Start/End Date/Update in one row -->
+            <div class="col-md-6 d-none" id="date-card-container">
+                <div class="card-3d card-disabled" id="date-card" data-bs-toggle="tooltip" title="Select start and end dates">
+                    <div class="date-range-group">
+                        <div class="date-input-container">
+                            <label for="start-date" class="form-label">Start Date</label>
+                            <input id="start-date" class="date-input" placeholder="Select Start Date" disabled>
+                        </div>
+                        <div class="date-input-container">
+                            <label for="end-date" class="form-label">End Date</label>
+                            <input id="end-date" class="date-input" placeholder="Select End Date" disabled>
+                        </div>
+                        <button id="date-update" class="btn-update" disabled title="Update date range">Update</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Second row: Rater Name and Agent Name cards -->
+        <div class="row justify-content-center">
+            <!-- Rater Name input card: Hidden initially, supports multiple selections -->
+            <div class="col-md-6 d-none" id="rater-card-container">
+                <div class="card-3d card-disabled" id="rater-card" data-bs-toggle="tooltip" title="Select one or more raters or All">
+                    <label for="rater-name" class="form-label">Rater Name</label>
+                    <div class="input-group">
+                        <select id="rater-name" class="form-select" multiple data-placeholder="Select Raters or All" disabled>
+                            <option value="all">All</option>
+                        </select>
+                        <button id="rater-update" class="btn-update" disabled title="Update selection">Update</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Agent Name input card: Hidden initially, no update button, full-width select -->
+            <div class="col-md-6 d-none" id="agent-card-container">
+                <div class="card-3d card-disabled" id="agent-card" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Select one or more agents or All">
+                    <label for="agent-name" class="form-label">Agent Name</label>
+                    <select id="agent-name" class="form-select agent-name-select" multiple data-placeholder="Select Agents or All" disabled>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- Buttons and status messages: Clear and Submit buttons with centered message area -->
+        <div class="row mt-4">
+            <div class="col-md-12 d-flex align-items-center justify-content-center">
+                <button id="clear-btn" class="btn btn-secondary btn-clear">Clear</button>
+                <div id="status-messages" class="status-messages"></div>
+                <button id="submit-btn" class="btn btn-primary btn-submit" disabled>Submit</button>
+            </div>
+        </div>
+        <!-- Progress overlay: Hidden by default, text hidden until Submit -->
+        <div id="overlay" class="overlay hidden">
+            <div class="progress-text">Submitting... <span id="progress-percent">0%</span></div>
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- jQuery for DOM manipulation -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <!-- Bootstrap JS for tooltips and utilities -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Select2 JS for searchable dropdowns -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- flatpickr JS for date picker -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script>
+        // Avoid jQuery conflicts by using a unique variable name
+        const $ = jQuery.noConflict();
+
+        $(document).ready(function () {
+            console.log('DOM ready'); // Debug: Confirm page is fully loaded
+
+            try {
+                // Function to add status messages with animation, centered
+                function addStatusMessage(text, delay) {
+                    // Delay message display to prevent overlap
+                    setTimeout(() => {
+                        const $status = $('#status-messages');
+                        const $message = $('<div class="status-message"></div>').text(text);
+                        $status.append($message);
+                        console.log('Status message added:', text); // Debug: Log message
+                        $message.addClass('active'); // Fade in
+                        setTimeout(() => {
+                            $message.addClass('fade-out'); // Fade out after 2000ms
+                            setTimeout(() => {
+                                $message.remove(); // Remove after animation
+                            }, 500);
+                        }, 2000);
+                    }, delay);
+                }
+
+                // Function to update glow effects (blue for current card, green for others)
+                function updateGlowEffects(currentCardId) {
+                    // Remove glow classes from all cards
+                    $('#function-card, #date-card, #rater-card, #agent-card').removeClass('card-current card-enabled');
+                    // Apply blue glow to current card
+                    if (currentCardId) {
+                        $(`#${currentCardId}`).addClass('card-current');
+                    }
+                    // Apply green glow to other enabled cards
+                    $('.card-3d:not(.card-disabled):not(.-card-current)').addClass('card-enabled');
+                    console.log('Glow effects updated, current card:', currentCardId); // Debug
+                }
+
+                // Initialize Select2 for Function (single selection)
+                let $function = $('#function');
+                let $functionUpdate = $('#function-update');
+                if ($function.length) {
+                    $function.select2({
+                        placeholder: 'Select Function',
+                        allowClear: true,
+                        width: '100%',
+                        // Hide selected value from dropdown
+                        matcher: function(params, data) {
+                            if ($.trim(params.term) === '') {
+                                return data;
+                            }
+                            // Skip if already selected
+                            if ($function.val() === data.id) {
+                                return null;
+                            }
+                            // Filter by search term
+                            if (data.text.toUpperCase().indexOf(params.term.toUpperCase()) === -1) {
+                                return null;
+                            }
+                            return data;
+                        }
+                    });
+                    console.log('Function Select2 initialized');
+                    console.log('Function update button present:', $functionUpdate.length > 0);
+                    // Fetch functions from backend
+                    addStatusMessage('Loading functions...', 0);
+                    $.ajax({
+                        url: '/get_functions',
+                        method: 'GET',
+                        success: function (data) {
+                            console.log('Received functions:', data);
+                            $function.empty().append('<option></option>');
+                            data.forEach(func => {
+                                $function.append(new Option(func, func));
+                            });
+                            $function.prop('disabled', false);
+                            $('#function-card').removeClass('card-disabled').addClass('card-current');
+                            updateGlowEffects('function-card');
+                            addStatusMessage('Functions loaded', 2500);
+                        },
+                        error: function (xhr) {
+                            console.error('Failed to fetch functions:', xhr);
+                            alert('Failed to load functions. Please try again.');
+                            addStatusMessage('Failed to load functions', 2500);
+                        }
+                    });
+                } else {
+                    console.error('Function element not found');
+                }
+
+                // Initialize flatpickr for Start and End Dates (disabled initially)
+                let $startDate = $('#start-date');
+                let $endDate = $('#end-date');
+                let $dateUpdate = $('#date-update');
+                let startDatePicker = null;
+                let endDatePicker = null;
+                if ($startDate.length && $endDate.length) {
+                    startDatePicker = flatpickr('#start-date', {
+                        dateFormat: 'Y-m-d',
+                        onChange: function(selectedDates) {
+                            // Update end date minDate to prevent invalid ranges
+                            if (selectedDates.length && endDatePicker) {
+                                endDatePicker.set('minDate', selectedDates[0]);
+                            }
+                            // Enable Update button if both dates selected
+                            $dateUpdate.prop('disabled', !selectedDates.length || !$endDate.val());
+                            console.log('Start date selected:', selectedDates); // Debug
+                        }
+                    });
+                    endDatePicker = flatpickr('#end-date', {
+                        dateFormat: 'Y-m-d',
+                        onChange: function(selectedDates) {
+                            // Enable Update button if both dates selected
+                            $dateUpdate.prop('disabled', !$startDate.val() || !selectedDates.length);
+                            console.log('End date selected:', selectedDates); // Debug
+                        }
+                    });
+                    console.log('flatpickr initialized for date range');
+                    console.log('Date update button present:', $dateUpdate.length > 0);
+                } else {
+                    console.error('Date input elements not found');
+                }
+
+                // Initialize Select2 for Rater Name (multiple selection, disabled initially)
+                let $raterName = $('#rater-name');
+                let $raterUpdate = $('#rater-update');
+                if ($raterName.length) {
+                    $raterName.select2({
+                        placeholder: 'Select Raters or All',
+                        allowClear: true,
+                        width: '100%',
+                        // Hide selected values from dropdown
+                        matcher: function(params, data) {
+                            if ($.trim(params.term) === '') {
+                                return data;
+                            }
+                            // Skip if already selected
+                            if ($raterName.val() && $raterName.val().includes(data.id)) {
+                                return null;
+                            }
+                            // Filter by search term
+                            if (data.text.toUpperCase().indexOf(params.term.toUpperCase()) === -1) {
+                                return null;
+                            }
+                            return data;
+                        }
+                    });
+                    console.log('Rater Name Select2 initialized');
+                    console.log('Rater update button present:', $raterUpdate.length > 0);
+                } else {
+                    console.error('Rater Name element not found');
+                }
+
+                // Initialize Select2 for Agent Name (multiple selection, disabled initially, full width)
+                let $agentName = $('#agent-name');
+                if ($agentName.length) {
+                    $agentName.select2({
+                        placeholder: 'Select Agents or All',
+                        allowClear: true,
+                        width: '100%',
+                        // Apply full-width class
+                        containerCssClass: 'agent-name-select',
+                        data: [{ id: 'all', text: 'All', selected: true }]
+                    });
+                    console.log('Agent Name Select2 initialized');
+                } else {
+                    console.error('Agent Name element not found');
+                }
+
+                // Track selections
+                let selectedFunction = null;
+                let selectedStartDate = null;
+                let selectedEndDate = null;
+                let selectedRaters = [];
+                let selectedAgents = [];
+
+                // Handle Function change to enable Update button
+                $function.on('change', function () {
+                    try {
+                        selectedFunction = $function.val();
+                        console.log('Function selected:', selectedFunction);
+                        // Enable Update button if function selected
+                        $functionUpdate.prop('disabled', !selectedFunction);
+                    } catch (e) {
+                        console.error('Error in function change handler:', e);
+                    }
+                });
+
+                // Handle Function Update button click
+                $functionUpdate.on('click', function () {
+                    try {
+                        $('[data-bs-toggle="tooltip"]').tooltip('hide'); // Hide tooltips to avoid clutter
+                        if (!selectedFunction) {
+                            alert('Please select a function.');
+                            return;
+                        }
+                        console.log('Function update clicked:', selectedFunction);
+                        addStatusMessage('Loading date range...', 0);
+                        // Clear and hide subsequent cards
+                        $startDate.addClass('fade-out explode');
+                        $endDate.addClass('fade-out explode');
+                        $raterName.addClass('fade-out explode');
+                        $agentName.addClass('fade-out explode');
+                        setTimeout(() => {
+                            // Clear date inputs and rater selections
+                            if (startDatePicker && typeof startDatePicker.clear === 'function') {
+                                startDatePicker.clear();
+                            } else {
+                                $startDate.val('');
+                            }
+                            if (endDatePicker && typeof endDatePicker.clear === 'function') {
+                                endDatePicker.clear();
+                            } else {
+                                $endDate.val('');
+                            }
+                            $raterName.val(null).trigger('change');
+                            $agentName.val(null).trigger('change');
+                            $agentName.select2({
+                                data: [{ id: 'all', text: 'All', selected: true }],
+                                width: '100%',
+                                containerCssClass: 'agent-name-select'
+                            });
+                            // Disable and hide subsequent cards
+                            $startDate.prop('disabled', true);
+                            $endDate.prop('disabled', true);
+                            $raterName.prop('disabled', true);
+                            $agentName.prop('disabled', true);
+                            $dateUpdate.prop('disabled', true);
+                            $raterUpdate.prop('disabled', true);
+                            $('#date-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#rater-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#rater-card-container').addClass('d-none');
+                            $('#agent-card-container').addClass('d-none');
+                            // Show Load Date Range card in first row
+                            $('#date-card-container').removeClass('d-none');
+                            // Reset animations
+                            $startDate.removeClass('fade-out explode').addClass('fade-in');
+                            $endDate.removeClass('fade-out explode').addClass('fade-in');
+                            $raterName.removeClass('fade-out explode').addClass('fade-in');
+                            $agentName.removeClass('fade-out explode').addClass('fade-in');
+                            setTimeout(() => {
+                                $startDate.removeClass('fade-in');
+                                $endDate.removeClass('fade-in');
+                                $raterName.removeClass('fade-in');
+                                $agentName.removeClass('fade-in');
+                            }, 500);
+                            // Fetch min/max dates for the selected function
+                            $.ajax({
+                                url: '/get_date_range',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ Function: selectedFunction }),
+                                success: function (data) {
+                                    console.log('Received date range:', data);
+                                    if (data.min_date && data.max_date) {
+                                        // Set date range for pickers
+                                        if (startDatePicker && endDatePicker && typeof startDatePicker.set === 'function') {
+                                            startDatePicker.set('minDate', data.min_date);
+                                            startDatePicker.set('maxDate', data.max_date);
+                                            endDatePicker.set('minDate', data.min_date);
+                                            endDatePicker.set('maxDate', data.max_date);
+                                        }
+                                        // Enable Load Date Range card
+                                        $startDate.prop('disabled', false);
+                                        $endDate.prop('disabled', false);
+                                        $('#date-card').removeClass('card-disabled').addClass('card-current');
+                                        updateGlowEffects('date-card');
+                                        addStatusMessage('Date range loaded', 2500);
+                                    } else {
+                                        alert('No date range available for this function.');
+                                        addStatusMessage('No date range available', 2500);
+                                    }
+                                },
+                                error: function (xhr) {
+                                    console.error('Failed to fetch date range:', xhr);
+                                    alert('Failed to load date range. Please try again.');
+                                    addStatusMessage('Failed to load date range', 2500);
+                                }
+                            });
+                        }, 500);
+                    } catch (e) {
+                        console.error('Error in function update handler:', e);
+                    }
+                });
+
+                // Handle Load Date Range Update button click
+                $dateUpdate.on('click', function () {
+                    try {
+                        $('[data-bs-toggle="tooltip"]').tooltip('hide');
+                        if (!$startDate.val() || !$endDate.val()) {
+                            alert('Please select both start and end dates.');
+                            return;
+                        }
+                        selectedStartDate = $startDate.val();
+                        selectedEndDate = $endDate.val();
+                        console.log('Date range updated:', selectedStartDate, selectedEndDate);
+                        addStatusMessage('Loading rater names...', 0);
+                        // Clear and hide subsequent cards
+                        $raterName.addClass('fade-out explode');
+                        $agentName.addClass('fade-out explode');
+                        setTimeout(() => {
+                            $raterName.val(null).trigger('change');
+                            $agentName.val(null).trigger('change');
+                            $agentName.select2({
+                                data: [{ id: 'all', text: 'All', selected: true }],
+                                width: '100%',
+                                containerCssClass: 'agent-name-select'
+                            });
+                            $raterName.prop('disabled', true);
+                            $agentName.prop('disabled', true);
+                            $raterUpdate.prop('disabled', true);
+                            $('#rater-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#agent-card-container').addClass('d-none');
+                            // Show Rater Name card in second row
+                            $('#rater-card-container').removeClass('d-none');
+                            $raterName.removeClass('fade-out explode').addClass('fade-in');
+                            $agentName.removeClass('fade-out explode').addClass('fade-in');
+                            setTimeout(() => {
+                                $raterName.removeClass('fade-in');
+                                $agentName.removeClass('fade-in');
+                            }, 500);
+                            // Fetch raters based on function and date range
+                            $.ajax({
+                                url: '/get_raters',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    Function: selectedFunction,
+                                    Start_Date: selectedStartDate,
+                                    End_Date: selectedEndDate
+                                }),
+                                success: function (data) {
+                                    console.log('Received raters:', data);
+                                    $raterName.empty();
+                                    data.forEach(rater => {
+                                        $raterName.append(new Option(rater, rater));
+                                    });
+                                    $raterName.append(new Option('All', 'all', true, true));
+                                    $raterName.prop('disabled', false);
+                                    $('#rater-card').removeClass('card-disabled').addClass('card-current');
+                                    updateGlowEffects('rater-card');
+                                    addStatusMessage('Rater names loaded', 2500);
+                                },
+                                error: function (xhr) {
+                                    console.error('Failed to fetch raters:', xhr);
+                                    alert('Failed to load raters. Please try again.');
+                                    addStatusMessage('Failed to load rater names', 2500);
+                                }
+                            });
+                        }, 500);
+                    } catch (e) {
+                        console.error('Error in date update handler:', e);
+                    }
+                });
+
+                // Handle Rater Name change to enable Update button
+                $raterName.on('change', function () {
+                    try {
+                        selectedRaters = $raterName.val() || [];
+                        console.log('Raters selected:', selectedRaters);
+                        // Enable Update button if raters selected
+                        $raterUpdate.prop('disabled', !selectedRaters.length);
+                        // Remove 'All' option if specific raters selected
+                        if (selectedRaters.length && !selectedRaters.includes('all')) {
+                            $raterName.find('option[value="all"]').remove();
+                        }
+                    } catch (e) {
+                        console.error('Error in rater change handler:', e);
+                    }
+                });
+
+                // Handle Rater Name Update button click
+                $raterUpdate.on('click', function () {
+                    try {
+                        $('[data-bs-toggle="tooltip"]').tooltip('hide');
+                        if (!selectedRaters.length) {
+                            alert('Please select at least one rater.');
+                            return;
+                        }
+                        console.log('Rater update clicked:', selectedRaters);
+                        addStatusMessage('Loading agent names...', 0);
+                        $agentName.addClass('fade-out explode');
+                        setTimeout(() => {
+                            $agentName.val(null).trigger('change');
+                            $agentName.select2({
+                                data: [{ id: 'all', text: 'All', selected: true }],
+                                width: '100%',
+                                containerCssClass: 'agent-name-select'
+                            });
+                            $agentName.prop('disabled', true);
+                            $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
+                            // Show Agent Name card in second row alongside Rater Name
+                            $('#agent-card-container').removeClass('d-none');
+                            $agentName.removeClass('fade-out explode').addClass('fade-in');
+                            setTimeout(() => {
+                                $agentName.removeClass('fade-in');
+                            }, 500);
+                            // Fetch agents based on function, dates, and raters
+                            $.ajax({
+                                url: '/get_agents',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    Function: selectedFunction,
+                                    Start_Date: selectedStartDate,
+                                    End_Date: selectedEndDate,
+                                    Rater_Names: selectedRaters
+                                }),
+                                success: function (data) {
+                                    console.log('Received agents:', data);
+                                    $agentName.empty();
+                                    data.forEach(agent => {
+                                        $agentName.append(new Option(agent, agent));
+                                    });
+                                    $agentName.append(new Option('All', 'all', true, true));
+                                    $agentName.trigger('change');
+                                    $agentName.prop('disabled', false);
+                                    $('#agent-card').removeClass('card-disabled').addClass('card-current');
+                                    updateGlowEffects('agent-card');
+                                    addStatusMessage('Agent names loaded', 2500);
+                                },
+                                error: function (xhr) {
+                                    console.error('Failed to fetch agents:', xhr);
+                                    alert('Failed to load agents. Please try again.');
+                                    addStatusMessage('Failed to load agent names', 2500);
+                                }
+                            });
+                        }, 500);
+                    } catch (e) {
+                        console.error('Error in rater update handler:', e);
+                    }
+                });
+
+                // Handle Agent Name change to enable Submit button
+                $agentName.on('change', function () {
+                    try {
+                        selectedAgents = $agentName.val() || [];
+                        console.log('Agents selected:', selectedAgents);
+                        // Enable Submit button if agents selected
+                        $('#submit-btn').prop('disabled', !selectedAgents.length);
+                        // Remove 'All' option if specific agents selected
+                        if (selectedAgents.length && !selectedAgents.includes('all')) {
+                            $agentName.find('option[value="all"]').remove();
+                        }
+                    } catch (e) {
+                        console.error('Error in agent change handler:', e);
+                    }
+                });
+
+                // Handle Clear button click
+                $('#clear-btn').on('click', function () {
+                    try {
+                        console.log('Clear button clicked');
+                        const $overlay = $('#overlay');
+                        // Apply explode animation to all inputs
+                        $function.addClass('fade-out explode');
+                        $startDate.addClass('fade-out explode');
+                        $endDate.addClass('fade-out explode');
+                        $raterName.addClass('fade-out explode');
+                        $agentName.addClass('fade-out explode');
+                        $overlay.addClass('hidden');
+                        $('.progress-text').removeClass('visible'); // Hide progress text
+                        addStatusMessage('Clearing selections...', 0);
+                        setTimeout(() => {
+                            // Reset all inputs
+                            $function.val(null).trigger('change');
+                            if (startDatePicker && typeof startDatePicker.clear === 'function') {
+                                startDatePicker.clear();
+                            } else {
+                                $startDate.val('');
+                            }
+                            if (endDatePicker && typeof endDatePicker.clear === 'function') {
+                                endDatePicker.clear();
+                            } else {
+                                $endDate.val('');
+                            }
+                            $raterName.val(null).trigger('change');
+                            $agentName.val(null).trigger('change');
+                            $agentName.select2({
+                                data: [{ id: 'all', text: 'All', selected: true }],
+                                width: '100%',
+                                containerCssClass: 'agent-name-select'
+                            });
+                            // Disable and hide all cards except Function
+                            $startDate.prop('disabled', true);
+                            $endDate.prop('disabled', true);
+                            $raterName.prop('disabled', true);
+                            $agentName.prop('disabled', true);
+                            $functionUpdate.prop('disabled', true);
+                            $dateUpdate.prop('disabled', true);
+                            $raterUpdate.prop('disabled', true);
+                            $('#submit-btn').prop('disabled', true);
+                            $('#date-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#rater-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#agent-card').removeClass('card-enabled').addClass('card-disabled');
+                            $('#date-card-container').addClass('d-none');
+                            $('#rater-card-container').addClass('d-none');
+                            $('#agent-card-container').addClass('d-none');
+                            selectedFunction = null;
+                            selectedStartDate = null;
+                            selectedEndDate = null;
+                            selectedRaters = [];
+                            selectedAgents = [];
+                            // Reset animations
+                            $function.removeClass('fade-out explode').addClass('fade-in');
+                            $startDate.removeClass('fade-out explode').addClass('fade-in');
+                            $endDate.removeClass('fade-out explode').addClass('fade-in');
+                            $raterName.removeClass('fade-out explode').addClass('fade-in');
+                            $agentName.removeClass('fade-out explode').addClass('fade-in');
+                            setTimeout(() => {
+                                $function.removeClass('fade-in');
+                                $startDate.removeClass('fade-in');
+                                $endDate.removeClass('fade-in');
+                                $raterName.removeClass('fade-in');
+                                $agentName.removeClass('fade-in');
+                                $('#function-card').addClass('card-current');
+                                updateGlowEffects('function-card');
+                                addStatusMessage('Selections cleared', 2500);
+                            }, 500);
+                        }, 500);
+                    } catch (e) {
+                        console.error('Error in clear button handler:', e);
+                    }
+                });
+
+                // Handle Submit button click
+                $('#submit-btn').on('click', function () {
+                    try {
+                        const $overlay = $('#overlay');
+                        const $progressBar = $('#progress-bar');
+                        const $progressPercent = $('#progress-percent');
+                        if ($function.length && $startDate.length && $endDate.length && $raterName.length && $agentName.length && $overlay.length && $progressBar.length) {
+                            if (!selectedFunction) {
+                                alert('Please select a function.');
+                                return;
+                            }
+                            if (!selectedStartDate || !selectedEndDate) {
+                                alert('Please select both start and end dates.');
+                                return;
+                            }
+                            if (!selectedRaters.length) {
+                                alert('Please select at least one rater.');
+                                return;
+                            }
+                            if (!selectedAgents.length) {
+                                alert('Please select at least one agent or All.');
+                                return;
+                            }
+                            // Apply pulse animation to all inputs
+                            $function.addClass('pulse');
+                            $startDate.addClass('pulse');
+                            $endDate.addClass('pulse');
+                            $raterName.addClass('pulse');
+                            $agentName.addClass('pulse');
+                            $overlay.removeClass('hidden');
+                            $('.progress-text').addClass('visible'); // Show progress text
+                            $progressBar.css('width', '0');
+                            addStatusMessage('Your input is submitted please wait...', 0);
+                            addStatusMessage('Fetching your data please wait...', 2500);
+
+                            // Poll progress from backend
+                            let progressInterval = setInterval(function () {
+                                $.get('/get_progress', function (data) {
+                                    const progress = data.progress;
+                                    $progressPercent.text(`${progress}%`);
+                                    $progressBar.css('width', `${(progress / 100) * 300}px`);
+                                    if (progress >= 100) {
+                                        clearInterval(progressInterval);
+                                    }
+                                }).fail(function () {
+                                    console.error('Failed to fetch progress');
+                                });
+                            }, 200);
+
+                            // Submit data to fetch CSV
+                            $.ajax({
+                                url: '/fetch_data',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    Function: selectedFunction,
+                                    Start_Date: selectedStartDate,
+                                    End_Date: selectedEndDate,
+                                    Rater_Names: JSON.stringify(selectedRaters),
+                                    Agent_Names: JSON.stringify(selectedAgents)
+                                }),
+                                xhrFields: {
+                                    responseType: 'blob'
+                                },
+                                success: function (data) {
+                                    // Handle CSV download
+                                    $function.removeClass('pulse').addClass('fade-out explode');
+                                    $startDate.removeClass('pulse').addClass('fade-out explode');
+                                    $endDate.removeClass('pulse').addClass('fade-out explode');
+                                    $raterName.removeClass('pulse').addClass('fade-out explode');
+                                    $agentName.removeClass('pulse').addClass('fade-out explode');
+                                    setTimeout(() => {
+                                        const url = window.URL.createObjectURL(new Blob([data]));
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = 'data.csv';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                        window.URL.revokeObjectURL(url);
+                                        // Reset UI and hide overlay
+                                        $function.removeClass('fade-out explode').addClass('fade-in');
+                                        $startDate.removeClass('fade-out explode').addClass('fade-in');
+                                        $endDate.removeClass('fade-out explode').addClass('fade-in');
+                                        $raterName.removeClass('fade-out explode').addClass('fade-in');
+                                        $agentName.removeClass('fade-out explode').addClass('fade-in');
+                                        $overlay.addClass('hidden');
+                                        $('.progress-text').removeClass('visible'); // Hide progress text
+                                        setTimeout(() => {
+                                            $function.removeClass('fade-in');
+                                            $startDate.removeClass('fade-in');
+                                            $endDate.removeClass('fade-in');
+                                            $raterName.removeClass('fade-in');
+                                            $agentName.removeClass('fade-in');
+                                            addStatusMessage('Data fetching completed', 2500);
+                                        }, 500);
+                                        clearInterval(progressInterval);
+                                    }, 500);
+                                },
+                                error: function (xhr) {
+                                    console.error('Error fetching data:', xhr);
+                                    alert('Error fetching data: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error'));
+                                    $overlay.addClass('hidden');
+                                    $('.progress-text').removeClass('visible'); // Hide progress text
+                                    $function.removeClass('pulse').addClass('fade-out explode');
+                                    $startDate.removeClass('pulse').addClass('fade-out explode');
+                                    $endDate.removeClass('pulse').addClass('fade-out explode');
+                                    $raterName.removeClass('pulse').addClass('fade-out explode');
+                                    $agentName.removeClass('pulse').addClass('fade-out explode');
+                                    setTimeout(() => {
+                                        $function.removeClass('fade-out explode').addClass('fade-in');
+                                        $startDate.removeClass('fade-out explode').addClass('fade-in');
+                                        $endDate.removeClass('fade-out explode').addClass('fade-in');
+                                        $raterName.removeClass('fade-out explode').addClass('fade-in');
+                                        $agentName.removeClass('fade-out explode').addClass('fade-in');
+                                        setTimeout(() => {
+                                            $function.removeClass('fade-in');
+                                            $startDate.removeClass('fade-in');
+                                            $endDate.removeClass('fade-in');
+                                            $raterName.removeClass('fade-in');
+                                            $agentName.removeClass('fade-in');
+                                            addStatusMessage('Failed to fetch data', 2500);
+                                        }, 500);
+                                    }, 500);
+                                    clearInterval(progressInterval);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error in submit button handler:', e);
+                        $('.progress-text').removeClass('visible'); // Ensure progress text hidden on error
+                    }
+                });
+
+                // Initialize Bootstrap tooltips
+                try {
+                    $('[data-bs-toggle="tooltip"]').tooltip();
+                    console.log('Tooltips initialized');
+                } catch (e) {
+                    console.error('Error initializing tooltips:', e);
+                }
+            } catch (e) {
+                console.error('Global script error:', e);
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+# Import required libraries for Flask, database, and CSV handling
+import pymssql
+import pandas as pd
+from flask import Flask, jsonify, request, Response, session
+from io import StringIO, BytesIO
+import json
+import time
+
+# Initialize Flask application
+app = Flask(__name__, static_folder='static')
+app.secret_key = 'your-secret-key'  # Secure key for session management; replace with a strong value
+
+# Database connection parameters; update with your SQL Server details
+DB_CONFIG = {
+    'server': 'your_server',
+    'database': 'your_database',
+    'user': 'your_username',
+    'password': 'your_password'
+}
+
+# Function to establish a connection to SQL Server
+def get_db_connection():
+    """
+    Establishes a connection to the SQL Server database.
+    Returns:
+        pymssql.Connection: Database connection object, or None if connection fails.
+    """
+    try:
+        conn = pymssql.connect(**DB_CONFIG)
+        print("Connected to database successfully")
+        return conn
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return None
+
+# Function to fetch distinct function values from the database
+def fetch_functions():
+    """
+    Retrieves distinct Function values from the ACM_VERINT_SAMPLES_MASTER table.
+    Returns:
+        list: List of function names, sorted alphabetically.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT Function FROM ACM_VERINT_SAMPLES_MASTER ORDER BY Function")
+        functions = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        return functions
+    except Exception as e:
+        print(f"Error fetching functions: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Function to fetch min/max dates for a given function
+def fetch_date_range(Function):
+    """
+    Retrieves the minimum and maximum Load_Date for a given Function.
+    Args:
+        Function (str): Selected function name.
+    Returns:
+        dict: Dictionary with min_date and max_date in YYYY-MM-DD format, or empty dict if no data.
+    """
+    if not Function:
+        print("Error: Function is empty or None")
+        return {}
+    conn = get_db_connection()
+    if not conn:
+        print("Error: Database connection failed")
+        return {}
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT MIN(CONVERT(VARCHAR(10), Load_Date, 120)) AS min_date,
+                   MAX(CONVERT(VARCHAR(10), Load_Date, 120)) AS max_date
+            FROM ACM_VERINT_SAMPLES_MASTER
+            WHERE Function = %s
+        """
+        cursor.execute(query, (Function,))
+        result = cursor.fetchone()
+        cursor.close()
+        min_date, max_date = result if result else (None, None)
+        print(f"Fetched date range for function {Function}: {min_date} to {max_date}")
+        return {'min_date': min_date, 'max_date': max_date} if min_date and max_date else {}
+    except Exception as e:
+        print(f"Error fetching date range for function {Function}: {e}")
+        return {}
+    finally:
+        conn.close()
+
+# Function to fetch distinct rater names for a function and date range
+def fetch_raters(Function, Start_Date, End_Date):
+    """
+    Retrieves distinct Rater_Name values for a given Function and date range.
+    Args:
+        Function (str): Selected function name.
+        Start_Date (str): Start date in YYYY-MM-DD format.
+        End_Date (str): End date in YYYY-MM-DD format.
+    Returns:
+        list: List of rater names, sorted alphabetically.
+    """
+    if not Function or not Start_Date or not End_Date:
+        print("Error: Function, Start_Date, or End_Date is empty")
+        return []
+    conn = get_db_connection()
+    if not conn:
+        print("Error: Database connection failed")
+        return []
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT DISTINCT Rater_Name
+            FROM ACM_VERINT_SAMPLES_MASTER
+            WHERE Function = %s AND Load_Date BETWEEN %s AND %s
+            ORDER BY Rater_Name
+        """
+        cursor.execute(query, (Function, Start_Date, End_Date))
+        raters = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        print(f"Fetched {len(raters)} raters for function: {Function}, dates: {Start_Date} to {End_Date}")
+        return raters
+    except Exception as e:
+        print(f"Error fetching raters: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Function to fetch distinct agent names for a function, date range, and raters
+def fetch_agents(Function, Start_Date, End_Date, Rater_Names):
+    """
+    Retrieves distinct Agent_Name values for a given Function, date range, and Rater_Names.
+    Args:
+        Function (str): Selected function name.
+        Start_Date (str): Start date in YYYY-MM-DD format.
+        End_Date (str): End date in YYYY-MM-DD format.
+        Rater_Names (list): List of selected rater names.
+    Returns:
+        list: List of agent names, sorted alphabetically.
+    """
+    if not Function or not Start_Date or not End_Date or not Rater_Names:
+        print("Error: Function, Start_Date, End_Date, or Rater_Names is empty")
+        return []
+    conn = get_db_connection()
+    if not conn:
+        print("Error: Database connection failed")
+        return []
+    try:
+        cursor = conn.cursor()
+        placeholders = ','.join(['%s' for _ in Rater_Names])
+        query = f"""
+            SELECT DISTINCT Agent_Name
+            FROM ACM_VERINT_SAMPLES_MASTER
+            WHERE Function = %s AND Load_Date BETWEEN %s AND %s AND Rater_Name IN ({placeholders})
+            ORDER BY Agent_Name
+        """
+        params = [Function, Start_Date, End_Date] + Rater_Names
+        cursor.execute(query, params)
+        agents = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        print(f"Fetched {len(agents)} agents for function: {Function}, dates: {Start_Date} to {End_Date}, raters: {Rater_Names}")
+        return agents
+    except Exception as e:
+        print(f"Error fetching agents: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Function to fetch data based on user selections and generate CSV
+def fetch_data(Function, Start_Date, End_Date, Rater_Names, Agent_Names):
+    """
+    Fetches all columns from ACM_VERINT_SAMPLES_MASTER based on filters and returns CSV content.
+    Args:
+        Function (str): Selected function name.
+        Start_Date (str): Start date in YYYY-MM-DD format.
+        End_Date (str): End date in YYYY-MM-DD format.
+        Rater_Names (list): List of selected rater names.
+        Agent_Names (list): List of selected agent names (or empty for all).
+    Returns:
+        BytesIO: In-memory buffer containing CSV data, or None if error occurs.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor(as_dict=True)
+        query = "SELECT * FROM ACM_VERINT_SAMPLES_MASTER WHERE Function = %s AND Load_Date BETWEEN %s AND %s"
+        params = [Function, Start_Date, End_Date]
+        if Rater_Names and 'all' not in Rater_Names:
+            placeholders = ','.join(['%s' for _ in Rater_Names])
+            query += f" AND Rater_Name IN ({placeholders})"
+            params.extend(Rater_Names)
+        if Agent_Names and 'all' not in Agent_Names:
+            placeholders = ','.join(['%s' for _ in Agent_Names])
+            query += f" AND Agent_Name IN ({placeholders})"
+            params.extend(Agent_Names)
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        cursor.close()
+        df = pd.DataFrame(rows)
+        csv_buffer = StringIO()
+        df.to_csv(csv_buffer, index=False)
+        csv_bytes = csv_buffer.getvalue().encode('utf-8')
+        return BytesIO(csv_bytes)
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+        return None
+    finally:
+        conn.close()
+
+# Route to serve the main page
+@app.route('/')
+def index():
+    """
+    Serves the main HTML page.
+    Returns:
+        Response: Static index.html file.
+    """
+    return app.send_static_file('index.html')
+
+# Route to fetch function names
+@app.route('/get_functions', methods=['GET'])
+def get_functions():
+    """
+    Endpoint to retrieve distinct function names.
+    Returns:
+        JSON: List of function names, or empty list on error.
+    """
+    try:
+        functions = fetch_functions()
+        return jsonify(functions)
+    except Exception as e:
+        print(f"Error in get_functions: {e}")
+        return jsonify([]), 500
+
+# Route to fetch date range for a function
+@app.route('/get_date_range', methods=['POST'])
+def get_date_range():
+    """
+    Endpoint to retrieve min/max Load_Date for a given function.
+    Request Body:
+        Function (str): Selected function name.
+    Returns:
+        JSON: Object with min_date and max_date, or empty object on error.
+    """
+    try:
+        data = request.get_json()
+        Function = data.get('Function')
+        print(f"Received in get_date_range: Function={Function}")
+        if not Function:
+            print("Error: Invalid Function")
+            return jsonify({}), 400
+        date_range = fetch_date_range(Function)
+        return jsonify(date_range)
+    except Exception as e:
+        print(f"Error in get_date_range: {e}")
+        return jsonify({}), 500
+
+# Route to fetch rater names
+@app.route('/get_raters', methods=['POST'])
+def get_raters():
+    """
+    Endpoint to retrieve rater names for a given function and date range.
+    Request Body:
+        Function (str): Selected function name.
+        Start_Date (str): Start date in YYYY-MM-DD format.
+        End_Date (str): End date in YYYY-MM-DD format.
+    Returns:
+        JSON: List of rater names, or empty list on error.
+    """
+    try:
+        data = request.get_json()
+        Function = data.get('Function')
+        Start_Date = data.get('Start_Date')
+        End_Date = data.get('End_Date')
+        print(f"Received in get_raters: Function={Function}, Start_Date={Start_Date}, End_Date={End_Date}")
+        if not Function or not Start_Date or not End_Date:
+            print("Error: Invalid Function, Start_Date, or End_Date")
+            return jsonify([]), 400
+        raters = fetch_raters(Function, Start_Date, End_Date)
+        return jsonify(raters)
+    except Exception as e:
+        print(f"Error in get_raters: {e}")
+        return jsonify([]), 500
+
+# Route to fetch agent names
+@app.route('/get_agents', methods=['POST'])
+def get_agents():
+    """
+    Endpoint to retrieve agent names for a given function, date range, and raters.
+    Request Body:
+        Function (str): Selected function name.
+        Start_Date (str): Start date in YYYY-MM-DD format.
+        End_Date (str): End date in YYYY-MM-DD format.
+        Rater_Names (list): List of selected rater names.
+    Returns:
+        JSON: List of agent names, or empty list on error.
+    """
+    try:
+        data = request.get_json()
+        Function = data.get('Function')
+        Start_Date = data.get('Start_Date')
+        End_Date = data.get('End_Date')
+        Rater_Names = data.get('Rater_Names', [])
+        print(f"Received in get_agents: Function={Function}, Start_Date={Start_Date}, End_Date={End_Date}, Rater_Names={Rater_Names}")
+        if not Function or not Start_Date or not End_Date or not Rater_Names:
+            print("Error: Invalid Function, Start_Date, End_Date, or Rater_Names")
+            return jsonify([]), 400
+        agents = fetch_agents(Function, Start_Date, End_Date, Rater_Names)
+        return jsonify(agents)
+    except Exception as e:
+        print(f"Error in get_agents: {e}")
+        return jsonify([]), 500
+
+# Route to fetch and download data as CSV
+@app.route('/fetch_data', methods=['POST'])
+def fetch_data_route():
+    """
+    Endpoint to fetch data based on selections and download as CSV.
+    Request Body:
+        Function (str): Selected function name.
+        Start_Date (str): Start date in YYYY-MM-DD format.
+        End_Date (str): End date in YYYY-MM-DD format.
+        Rater_Names (str): JSON string of selected rater names.
+        Agent_Names (str): JSON string of selected agent names.
+    Returns:
+        Response: CSV file download, or JSON error response.
+    """
+    try:
+        data = request.get_json()
+        Function = data.get('Function')
+        Start_Date = data.get('Start_Date')
+        End_Date = data.get('End_Date')
+        Rater_Names = json.loads(data.get('Rater_Names', '[]'))
+        Agent_Names = json.loads(data.get('Agent_Names', '[]'))
+        
+        if not Function or not Start_Date or not End_Date:
+            return jsonify({'error': 'Function, Start_Date, and End_Date are required'}), 400
+        
+        session['progress'] = 0
+        for i in range(0, 101, 20):
+            session['progress'] = i
+            time.sleep(0.2)
+
+        csv_buffer = fetch_data(Function, Start_Date, End_Date, Rater_Names, Agent_Names)
+        if csv_buffer:
+            session['progress'] = 100
+            print("Sending CSV response with filename data.csv")
+            return Response(
+                csv_buffer,
+                mimetype='text/csv',
+                headers={
+                    'Content-Disposition': 'attachment; filename=data.csv'
+                }
+            )
+        else:
+            return jsonify({'error': 'No data found or error occurred'}), 500
+    except Exception as e:
+        print(f"Error in fetch_data_route: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Route to get progress percentage
+@app.route('/get_progress', methods=['GET'])
+def get_progress():
+    """
+    Endpoint to retrieve the current progress percentage.
+    Returns:
+        JSON: Object with progress percentage (0-100).
+    """
+    try:
+        progress = session.get('progress', 0)
+        return jsonify({'progress': progress})
+    except Exception as e:
+        print(f"Error in get_progress: {e}")
+        return jsonify({'progress': 0}), 500
+
+# Run the Flask application
+if __name__ == '__main__':
+    app.run(debug=True)
+
+Testing Instructions
+Initial Display:
+Open http://localhost:5000, confirm only Function card is visible, centered, with blue glow.
+Verify container border, hidden Load Date Range/Rater Name/Agent Name cards.
+Function Selection:
+Select a function (e.g., “Sales”), confirm Update button enables, 10px gap.
+Click Update, verify Load Date Range card appears in first row with blue glow.
+Check date pickers for min/max dates (e.g., 2025-05-23 to 2025-07-15 for Sales).
+Check Console (F12 → Console) for Received date range.
+Load Date Range:
+Confirm Start/End Date labels above inputs, inputs/Update button in one row, aligned at bottom, 10px gaps.
+Select dates within the min/max range, ensure End Date can’t be before Start Date.
+Click Update, verify Rater Name card appears in second row with blue glow.
+Check Console for Received raters.
+Rater Name:
+Select “All” or multiple raters, confirm selected names hidden, “All” disappears if specific raters selected.
+Confirm 10px gap between Select2 input and Update button.
+Click Update, verify Agent Name card appears in second row beside Rater Name, blue glow.
+Check Console for Received agents.
+Confirm Agent Name select box uses full card width.
+Agent Name:
+Select “All” or agents, confirm Submit button enables, “All” disappears if specific agents selected.
+Clearing Logic:
+With all cards visible, click Function Update:
+Rater Name/Agent Name cleared and hidden.
+Load Date Range cleared, visible in first row, blue glow.
+With Rater Name/Agent Name visible, click Load Date Range Update:
+Agent Name cleared and hidden.
+Rater Name cleared, visible in second row, blue glow.
+With Agent Name visible, click Rater Name Update:
+Agent Name cleared, reloaded in second row, blue glow.
+Submit:
+Select all fields, click Submit, verify data.csv downloads with filtered data.
+Confirm “Submitting... 0%” appears only after Submit click.
+Layout:
+Verify 2-column layout: Function/Load Date Range in first row, Rater Name/Agent Name in second row.
+Check consistent card sizes and centering.
+Status Messages:
+Confirm messages are centered.
+Date Logic:
+Verify date pickers respect min/max dates from database for each Function.
+Error Check:
+Verify alerts for missing selections or empty date ranges.
+Share Console/terminal logs if issues occur.
+Debugging Tips
+Date Range: Check Console for Received date range, verify min/max dates in flatpickr.
+Agent Name Width: Inspect #agent-name for .agent-name-select and max-width: 100%.
+Database Issues: Check terminal logs for query errors, ensure DB_CONFIG is correct.
+Progress Text: Ensure .progress-text has opacity: 0 initially, .visible on Submit.
+Glow Effects: Confirm .card-current (blue), .card-enabled (green).
+Clear Cache: Refresh with Ctrl+F5.
+
+CQMT Random Samples
+Overview
+CQMT Random Samples is a web application designed to allow users to filter and download data from the ACM_VERINT_SAMPLES_MASTER database table based on selections for Function, Load Date Range, Rater Name, and Agent Name. The application features a responsive, user-friendly interface with a 2-column layout, animations, and dynamic data loading. It supports a sequential selection process, ensuring a clear workflow for filtering data and exporting it as a CSV file.
+Features
+
+2-Column Layout: Cards are arranged in two rows:
+First row: Function and Load Date Range cards.
+Second row: Rater Name and Agent Name cards.
+
+
+Function Selection: Single selection dropdown for choosing a Function (e.g., Sales, Support).
+Load Date Range: Start and End Date inputs in one row, with labels above, and an Update button aligned at the bottom. Date range is dynamically set based on min/max Load_Date for the selected Function (e.g., 23 May 2025 to 15 Jul 2025).
+Rater Name: Multiple selection dropdown with an "All" option, hidden when specific raters are selected.
+Agent Name: Multiple selection dropdown with an "All" option, full-width input, hidden when specific agents are selected.
+Execution Order: Sequential card visibility:
+Initial: Only Function card visible.
+Function Update: Shows Load Date Range, clears/hides Rater Name/Agent Name.
+Load Date Range Update: Shows Rater Name, clears/hides Agent Name.
+Rater Name Update: Shows Agent Name beside Rater Name.
+
+
+Update Buttons: Present for Function, Load Date Range, and Rater Name; absent for Agent Name.
+Visual Effects:
+Blue glow (#00B7EB) for the current card, green glow (#4CAF50) for other enabled cards.
+Animations for input changes (fade-out explode, pulse).
+
+
+Status Messages: Centered messages with fade-in/out animations for user feedback.
+Container Border: Light gray border around the entire interface.
+Progress Overlay: Hidden by default, shows “Submitting... 0%” only on Submit.
+10px Gaps: Consistent spacing between inputs/selects and Update buttons.
+CSV Download: Exports filtered data as a CSV file.
+Backend: Flask with SQL Server integration for dynamic data fetching.
+
+Prerequisites
+
+Python 3.8+: For running the Flask backend.
+SQL Server: Database with the ACM_VERINT_SAMPLES_MASTER table.
+Dependencies:
+Python: flask, pymssql, pandas
+Frontend: Internet connection for CDN-hosted libraries (Bootstrap, jQuery, Select2, flatpickr)
+
+
+Access the Application:
+
+Open a web browser and navigate to http://localhost:5000.
+
+
+
+Usage
+
+Function Selection:
+
+Select a Function (e.g., “Sales”) from the dropdown.
+Click the Update button to load the Load Date Range card.
+The Start/End Date inputs will enable dates within the min/max range for the Function (e.g., 23 May 2025 to 15 Jul 2025 for Sales).
+
+
+Load Date Range:
+
+Select Start and End Dates within the enabled range.
+Ensure End Date is not before Start Date.
+Click Update to load the Rater Name card.
+
+
+Rater Name:
+
+Select one or more Raters or “All”.
+Selected raters are hidden from the dropdown until deselected.
+Click Update to load the Agent Name card beside Rater Name.
+
+
+Agent Name:
+
+Select one or more Agents or “All” in the full-width dropdown.
+Selected agents are hidden from the dropdown until deselected.
+The Submit button enables once agents are selected.
+
+
+Submit:
+
+Click Submit to download a CSV file with filtered data.
+A progress overlay shows “Submitting... 0%” and updates to 100%.
+
+
+Clear:
+
+Click Clear to reset all inputs, hide all cards except Function, and clear selections.
+
+
+
+Testing
+
+Initial Display:
+
+Verify only the Function card is visible, centered, with a blue glow.
+Check for a light gray border around the container.
+Confirm Load Date Range, Rater Name, and Agent Name cards are hidden.
+
+
+Function Selection:
+
+Select a Function, verify the Update button enables, 10px gap between select and button.
+Click Update, confirm Load Date Range card appears in the first row with blue glow.
+Verify Start/End Date pickers show the correct min/max range (e.g., 2025-05-23 to 2025-07-15).
+Check Console (F12 → Console) for Received date range.
+
+
+Load Date Range:
+
+Confirm Start/End Date labels are above inputs, inputs/Update button in one row, aligned at bottom, with 10px gaps.
+Select dates within the min/max range, ensure End Date respects Start Date.
+Click Update, verify Rater Name card appears in the second row with blue glow.
+Check Console for Received raters.
+
+
+Rater Name:
+
+Select “All” or multiple raters, confirm selected names are hidden, “All” disappears if specific raters selected.
+Verify 10px gap between Select2 input and Update button.
+Click Update, confirm Agent Name card appears in the second row beside Rater Name, blue glow.
+Check Console for Received agents.
+Confirm Agent Name select box uses full card width.
+
+
+Agent Name:
+
+Select “All” or agents, confirm Submit button enables, “All” disappears if specific agents selected.
+
+
+Clearing Logic:
+
+With all cards visible, click Function Update:
+Rater Name/Agent Name cleared and hidden.
+Load Date Range cleared, visible in first row, blue glow.
+
+
+With Rater Name/Agent Name visible, click Load Date Range Update:
+Agent Name cleared and hidden.
+Rater Name cleared, visible in second row, blue glow.
+
+
+With Agent Name visible, click Rater Name Update:
+Agent Name cleared, reloaded in second row, blue glow.
+
+
+
+
+Submit:
+
+Select all fields, click Submit, verify data.csv downloads with filtered data.
+Confirm “Submitting... 0%” appears only after Submit click.
+
+
+Layout:
+
+Verify 2-column layout: Function/Load Date Range in first row, Rater Name/Agent Name in second row.
+Check consistent card sizes and centering.
+
+
+Status Messages:
+
+Confirm messages are centered (e.g., “Loading functions...”, “Functions loaded”).
+
+
+Error Handling:
+
+Verify alerts for missing selections or empty date ranges.
+Check Console/terminal logs for errors.
+
+
+
+Debugging
+
+Date Range: Check Console for Received date range, verify min/max dates in flatpickr.
+Agent Name Width: Inspect #agent-name for .agent-name-select and max-width: 100%.
+Database Issues: Check terminal logs for query errors, ensure DB_CONFIG is correct.
+Progress Text: Ensure .progress-text has opacity: 0 initially, .visible on Submit.
+Glow Effects: Confirm .card-current (blue), .card-enabled (green).
+Clear Cache: Refresh with Ctrl+F5.
+
+Contributing
+
+Submit issues or pull requests to the repository (if applicable).
+Ensure code follows the existing structure and includes detailed comments.
+
+License
+This project is licensed under the MIT License (or specify your preferred license).
