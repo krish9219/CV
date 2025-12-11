@@ -8,7 +8,7 @@
     if [ -z "$created" ] || [ "$created" = "-" ]; then created="N/A"; fi; \
     modified=$(stat -c %y "$f" 2>/dev/null || echo N/A); \
     owner=$(stat -c %U "$f" 2>/dev/null || echo N/A); \
-    mb=$(awk -v b="$bytes" "BEGIN{printf \"%.2f\", b/1024/1024}"); \
-    gb=$(awk -v b="$bytes" "BEGIN{printf \"%.2f\", b/1024/1024/1024}"); \
+    mb=$(echo "$bytes" | awk '\''{printf "%.2f", $1/1024/1024}'\''); \
+    gb=$(echo "$bytes" | awk '\''{printf "%.2f", $1/1024/1024/1024}'\''); \
     printf "\"%s\",%s,%s,%s,\"%s\",\"%s\",\"%s\",%s\n" "$f" "$mb" "$gb" "$bytes" "$created" "$modified" "$owner" "$days_old"' _ {} \
 ) > /save/location/report.csv
