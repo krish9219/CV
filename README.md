@@ -1,1 +1,14 @@
-find /search/path -type f -mtime +30 -exec sh -c 'printf "path,size_mb,size_gb,size_bytes,created,modified,owner,days_old\n"; for f; do bytes=$(stat -c%s "$f"); days_old=$(( ( $(date +%s) - $(stat -c %Y "$f") ) / 86400 )); created=$(stat -c %w "$f" 2>/dev/null || echo N/A); modified=$(stat -c %y "$f"); owner=$(stat -c %U "$f"); printf "\"%s\",%.2f,%.2f,%s,\"%s\",\"%s\",\"%s\",%s\n" "$f" "$(awk -v b="$bytes" 'BEGIN{printf \"%.2f\", b/1024/1024}')" "$(awk -v b="$bytes" 'BEGIN{printf \"%.2f\", b/1024/1024/1024}')" "$bytes" "$created" "$modified" "$owner" "$days_old"; done' sh {} + > /save/location/report.csv
+( printf 'path,size_mb,size_gb,size_bytes,created,modified,owner,days_old\n'; \
+  find /search/path -type f -mtime +30 -print0 | \
+  xargs -0 -n1 -P4 sh -c 'f="$1"; \
+    bytes=$(stat -c%s "$f" 2>/dev/null || echo 0); \
+    mtime_epoch=$(stat -c %Y "$f" 2>/dev/null || echo 0); \
+    days_old=$(( ( $(date +%s) - mtime_epoch ) / 86400 )); \
+    created=$(stat -c %w "$f" 2>/dev/null || echo); \
+    if [ -z "$created" ] || [ "$created" = "-" ]; then created="N/A"; fi; \
+    modified=$(stat -c %y "$f" 2>/dev/null || echo N/A); \
+    owner=$(stat -c %U "$f" 2>/dev/null || echo N/A); \
+    mb=$(awk -v b="$bytes" "BEGIN{printf \"%.2f\", b/1024/1024}"); \
+    gb=$(awk -v b="$bytes" "BEGIN{printf \"%.2f\", b/1024/1024/1024}"); \
+    printf "\"%s\",%s,%s,%s,\"%s\",\"%s\",\"%s\",%s\n" "$f" "$mb" "$gb" "$bytes" "$created" "$modified" "$owner" "$days_old"' _ {} \
+) > /save/location/report.csv
