@@ -1,1 +1,192 @@
-quantum AI
+function render() {
+      const nameFilter = document.getElementById("filterName").value.trim().toLowerCase();
+      const teamFilter = document.getElementById("filterTeam").value.trim().toLowerCase();
+
+      let list = allProjects.filter(p =>
+        (!nameFilter || p.name.toLowerCase().includes(nameFilter)) &&
+        (!teamFilter || (p.team_name || "").toLowerCase().includes(teamFilter))
+      );
+
+      if (sortCol && sortDir) {
+        list.sort((a, b) => {
+          let cmp = 0;
+          if (sortCol === "name") {
+            cmp = a.name.localeCompare(b.name);                               // alphabetical on project name
+          } else if (sortCol === "criticality") {
+            cmp = (CRIT_ORDER[a.criticality] || 9) - (CRIT_ORDER[b.criticality] || 9); // High→Medium→Low
+          } else if (sortCol === "team") {
+            cmp = (a.team_name || "").localeCompare(b.team_name || "");           // alphabetical on team name
+          } else if (sortCol === "date") {
+            const da = a.production_date || "9999-99-99";                     // empty dates sort last
+            const db = b.production_date || "9999-99-99";
+            cmp = da.localeCompare(db);                                       // YYYY-MM-DD strings sort correctly as text
+          }
+          return sortDir === "asc" ? cmp : -cmp;                             // flip sign for descending
+        });
+      }
+
+      const tbody = document.getElementById("tbody");
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#999;padding:20px">No projects found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(p => {
+        const activeIdx = activeStageIndex(p.vals);
+        const hasComments = true; // button always shown; disabled if no data
+
+        const stageCells = p.vals.map((v, i) => {
+          const n = v ?? 0;    // treat null/undefined as 0
+          const cls = colorClass(n) + (i === activeIdx ? " active-stage" : "");
+          return `<td class="${cls}">${n}%</td>`;
+        }).join("");
+
+        return `<tr>
+      <td class="c-name" title="${escHtml(p.name)}">${escHtml(p.name)}</td>
+      <td class="${critClass(p.criticality)}">${p.criticality || "—"}</td>
+      <td title="${escHtml(p.team_name || "")}">${escHtml(p.team_name || "—")}</td>
+      <td>${fmtDate(p.production_date)}</td>
+      ${stageCells}
+      <td><button class="comm-btn" onclick="openComments(${p.id},'${escHtml(p.name)}')" title="View comments">💬</button></td>
+    </tr>`;
+      }).join("");
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    // ── Load projects ──────────────────────────────────────────────────────────
+    async function loadProjects() {
+      try {
+        allProjects = await apiFetch("/projects");
+        render();
+      } catch (e) {
+        showToast("Cannot connect to server. Is app.py running?", "error");
+      }
+    }
+
+    // ── Sorting — unified click handler for all 4 sortable columns ───────────
+    document.querySelectorAll("th.sortable").forEach(th => {
+      th.addEventListener("click", () => {
+        const col = th.dataset.col;                             // read which column was clicked
+        if (sortCol === col) {
+          sortDir = sortDir === "asc" ? "desc" : "asc";        // same column: toggle direction
+        } else {
+          sortCol = col;                                        // new column: start with ascending
+          sortDir = "asc";
+        }
+
+        // Update header visual state
+        document.querySelectorAll("th.sortable").forEach(h => {
+          h.classList.remove("sort-active");
+          h.querySelector(".sort-icon").textContent = "⇅";     // reset all icons to neutral
+        });
+        th.classList.add("sort-active");
+        th.querySelector(".sort-icon").textContent = sortDir === "asc" ? "↑" : "↓";
+
+        render();
+      });
+    });
+
+    // ── Filters ────────────────────────────────────────────────────────────────
+    document.getElementById("filterName").addEventListener("input", render);
+    document.getElementById("filterTeam").addEventListener("input", render);
+
+    // ── Refresh ────────────────────────────────────────────────────────────────
+    document.getElementById("refreshBtn").addEventListener("click", loadProjects);
+
+    // ── Comments Modal ─────────────────────────────────────────────────────────
+    async function openComments(pid, pname) {
+      document.getElementById("commModalTitle").textContent = pname + " — Comments";
+      document.getElementById("commModalBody").innerHTML = '<p class="no-comments">Loading...</p>';
+      document.getElementById("commModal").classList.add("show");
+
+      try {
+        const rows = await apiFetch(`/projects/${pid}/comments`);
+        const body = document.getElementById("commModalBody");
+        if (rows.length === 0) {
+          body.innerHTML = '<p class="no-comments">No comments yet for this project.</p>';
+          return;
+        }
+        body.innerHTML = rows.map(r => `
+      <div class="comm-item">
+        <div class="stage-tag">${escHtml(r.stage_name)} — ${r.value}%</div>
+        <div class="comm-text">${escHtml(r.comment || "(no comment)")}</div>
+        <div class="comm-meta">${r.updated_at}</div>
+      </div>`).join("");
+      } catch (e) {
+        document.getElementById("commModalBody").innerHTML =
+          '<p class="no-comments" style="color:#c62828">Failed to load comments.</p>';
+      }
+    }
+
+    document.getElementById("closeCommModal").onclick = () => {
+      document.getElementById("commModal").classList.remove("show");
+    };
+    document.getElementById("commModal").addEventListener("click", function (e) {
+      if (e.target === this) this.classList.remove("show");
+    });
+
+    // ── Add Project Modal ──────────────────────────────────────────────────────
+    function resetAddForm() {
+      document.getElementById("addName").value = "";
+      document.getElementById("addCriticality").value = "Medium";
+      document.getElementById("addTeam").value = "";
+      document.getElementById("addProdDate").value = "";
+      document.getElementById("addName").classList.remove("input-error");
+      document.getElementById("addNameTooltip").style.display = "none";
+    }
+
+    document.getElementById("openAddModal").onclick = () => {
+      resetAddForm();
+      document.getElementById("addModal").classList.add("show");
+      setTimeout(() => document.getElementById("addName").focus(), 100);
+    };
+    document.getElementById("closeAddModal").onclick = () => {
+      document.getElementById("addModal").classList.remove("show");
+    };
+    document.getElementById("cancelAddModal").onclick = () => {
+      document.getElementById("addModal").classList.remove("show");
+    };
+    document.getElementById("addModal").addEventListener("click", function (e) {
+      if (e.target === this) this.classList.remove("show");
+    });
+
+    document.getElementById("saveAddModal").onclick = async () => {
+      const name = document.getElementById("addName").value.trim();
+      const tooltip = document.getElementById("addNameTooltip");
+      const nameEl = document.getElementById("addName");
+
+      if (!name) {
+        nameEl.classList.add("input-error");
+        tooltip.textContent = "Project name is required.";
+        tooltip.style.display = "block";
+        return;
+      }
+
+      try {
+        const created = await apiFetch("/projects", {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            criticality: document.getElementById("addCriticality").value,
+            team_name: document.getElementById("addTeam").value.trim(),
+            production_date: document.getElementById("addProdDate").value || null,
+          }),
+        });
+        allProjects.push(created);
+        document.getElementById("addModal").classList.remove("show");
+        render();
+        showToast("Project added ✓");
+      } catch (e) {
+        nameEl.classList.add("input-error");
+        tooltip.textContent = e.message;
+        tooltip.style.display = "block";
+      }
+    };
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+    loadProjects();
+  </script>
+</body>
