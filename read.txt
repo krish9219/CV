@@ -1,1 +1,268 @@
 Future of computing is Quantum AI
+
+@app.route("/analyst")
+def analyst_panel():
+    """
+    Serve the Analyst Update Panel.
+    Share this URL with the analyst / execution team:
+        http://localhost:5000/analyst
+    """
+    return send_from_directory(basedir, "Analyst_Updates.html")   # Send the HTML file from the project root directory
+
+
+# ── Route: Project Status Dashboard ──────────────────────────────────────────
+@app.route("/dashboard")
+def lead_dashboard():
+    """
+    Serve the Project Status Dashboard (read-only lead view).
+    Share this URL with business leads / managers:
+        http://localhost:5000/dashboard
+    """
+    return send_from_directory(basedir, "Project_Updates.html")   # Send the HTML file from the project root directory
+
+
+# =============================================================================
+#  API ROUTES  — all return JSON; called by both HTML pages via fetch()
+# =============================================================================
+
+# ── GET /api/projects ─────────────────────────────────────────────────────────
+@app.route("/api/projects", methods=["GET"])
+def get_projects():
+    """
+    Return a JSON array of all projects ordered by creation date (oldest first).
+    Called by both HTML pages on load to populate their views.
+    """
+    with engine.connect() as conn:                                          # Open a database connection
+        rows = conn.execute(                                                # Execute SELECT query
+            text("SELECT * FROM projects ORDER BY created_at")             # Fetch all rows, oldest project first
+        ).mappings().all()                                                  # Convert result to a list of dict-like mappings
+    return jsonify([row_to_project(r) for r in rows])                      # Serialise every row and return as JSON array
+
+
+# ── POST /api/projects ────────────────────────────────────────────────────────
+@app.route("/api/projects", methods=["POST"])
+def create_project():
+    """
+    Create a new project record.
+    Expects JSON body: { name, criticality, team_name, production_date }
+    Returns the newly created project as JSON with HTTP 201.
+    """
+    data = request.get_json()                                               # Parse the JSON request body into a dict
+    name = (data.get("name") or "").strip()                                # Extract project name; strip leading/trailing spaces
+    if not name:                                                            # Reject the request if name is blank
+        return jsonify({"error": "Project name is required."}), 400        # Return 400 Bad Request with error message
+
+    with engine.connect() as conn:                                         # Open a database connection
+        duplicate = conn.execute(                                          # Check for an existing project with the same name
+            text("SELECT id FROM projects WHERE LOWER(name) = LOWER(:name)"),
+            {"name": name}                                                 # Bind the name parameter safely (prevents SQL injection)
+        ).fetchone()                                                       # Returns the first match or None
+        if duplicate:                                                      # If a duplicate was found, reject
+            return jsonify({"error": "A project with this name already exists."}), 409  # 409 Conflict
+
+        conn.execute(                                                      # Insert new row into the projects table
+            text("""
+                INSERT INTO projects (name, criticality, team_name, production_date)
+                VALUES (:name, :criticality, :team_name, :production_date)
+            """),
+            {
+                "name":            name,                                   # Cleaned project name
+                "criticality":     data.get("criticality", "Medium"),     # Use provided value or default to Medium
+                "team_name":       (data.get("team_name") or "").strip(), # Clean team name; empty string if absent
+                "production_date": data.get("production_date") or None,   # Store None if no date was provided
+            }
+        )
+        conn.commit()                                                      # Persist the INSERT to disk
+
+        new_row = conn.execute(                                            # Re-fetch the row that was just inserted
+            text("SELECT * FROM projects WHERE LOWER(name) = LOWER(:name)"),
+            {"name": name}
+        ).mappings().fetchone()                                            # Get the single matching row as a dict-like mapping
+
+    return jsonify(row_to_project(new_row)), 201                          # Return the new project with 201 Created status
+
+
+# ── PUT /api/projects/<id> ────────────────────────────────────────────────────
+@app.route("/api/projects/<int:pid>", methods=["PUT"])
+def update_project(pid):
+    """
+    Edit a project's name and/or metadata (criticality, team_name, production_date).
+    Only the fields included in the request body are updated; others keep their current value.
+    Returns the updated project as JSON.
+    """
+    data = request.get_json()                                              # Parse JSON body
+
+    with engine.connect() as conn:                                         # Open DB connection
+        existing = conn.execute(                                           # Look up the project by its primary key
+            text("SELECT * FROM projects WHERE id = :id"),
+            {"id": pid}
+        ).mappings().fetchone()                                            # Returns None if no such project
+        if not existing:                                                   # Project does not exist — return 404
+            return jsonify({"error": "Project not found."}), 404
+
+        name = (data.get("name") or "").strip() or existing["name"]      # Use new name if supplied, otherwise keep the old one
+
+        if name != existing["name"]:                                       # Only run duplicate check when the name has actually changed
+            dup = conn.execute(
+                text("SELECT id FROM projects WHERE LOWER(name) = LOWER(:name) AND id != :id"),
+                {"name": name, "id": pid}                                 # Exclude current project from the check
+            ).fetchone()
+            if dup:                                                        # Another project already has this name — reject
+                return jsonify({"error": "A project with this name already exists."}), 409
+
+        conn.execute(                                                      # Run UPDATE statement for all editable columns
+            text("""
+                UPDATE projects
+                SET name            = :name,
+                    criticality     = :criticality,
+                    team_name       = :team_name,
+                    production_date = :production_date
+                WHERE id = :id
+            """),
+            {
+                "id":              pid,                                                               # Identify the row to update
+                "name":            name,                                                              # New or unchanged project name
+                "criticality":     data.get("criticality",     existing["criticality"]),             # New value or keep existing
+                "team_name":       (data.get("team_name") or existing["team_name"] or "").strip(),   # New value or keep existing
+                "production_date": data.get("production_date") or None,                              # New date or clear to None
+            }
+        )
+        conn.commit()                                                      # Persist the UPDATE
+
+        updated = conn.execute(                                            # Re-fetch the row to return fresh data
+            text("SELECT * FROM projects WHERE id = :id"),
+            {"id": pid}
+        ).mappings().fetchone()
+
+    return jsonify(row_to_project(updated))                                # Return the updated project as JSON
+
+
+# ── PUT /api/projects/<id>/stage ──────────────────────────────────────────────
+@app.route("/api/projects/<int:pid>/stage", methods=["PUT"])
+def update_stage(pid):
+    """
+    Update a single stage percentage for a project and append an audit record to history.
+    Expects JSON body: { stage_index (0–9), value (1–100), comment (optional string) }
+    Enforces the Production Deployment rule: stage index 8 requires all stages 0–7 to be >= 90%.
+    Returns the updated project as JSON.
+    """
+    data        = request.get_json()                                       # Parse JSON body
+    stage_index = data.get("stage_index")                                 # Which stage to update (integer 0–9)
+    value       = data.get("value")                                       # New percentage value (integer 1–100)
+    comment     = (data.get("comment") or "").strip()                    # Analyst's comment; empty string if omitted
+
+    if stage_index is None or value is None:                              # Both fields are mandatory
+        return jsonify({"error": "stage_index and value are required."}), 400
+
+    stage_index = int(stage_index)                                        # Cast to int in case the client sent a string
+    value       = int(value)                                              # Cast to int in case the client sent a string
+
+    if value < 1 or value > 100:                                         # Enforce valid percentage range
+        return jsonify({"error": "Value must be between 1 and 100."}), 400
+
+    with engine.connect() as conn:                                        # Open DB connection
+        project = conn.execute(                                           # Fetch the target project row
+            text("SELECT * FROM projects WHERE id = :id"),
+            {"id": pid}
+        ).mappings().fetchone()
+        if not project:                                                   # Project does not exist — return 404
+            return jsonify({"error": "Project not found."}), 404
+
+        if stage_index == 8:                                              # Special rule: Production Deployment (index 8)
+            for i in range(8):                                            # Loop over each of the 8 preceding stages
+                prev_val = project[f"v{i}"]                              # Read current percentage for stage i
+                if prev_val < 90:                                         # Block if any preceding stage is below 90%
+                    return jsonify({
+                        "error": (
+                            f"Production Deployment requires all previous stages >= 90%. "
+                            f"'{STAGES[i]}' is currently {prev_val}%."   # Tell the analyst exactly which stage is blocking
+                        )
+                    }), 400
+
+        col = f"v{stage_index}"                                          # Build the dynamic column name: v0, v1, … v9
+        conn.execute(                                                     # Update the specific stage column
+            text(f"UPDATE projects SET {col} = :value WHERE id = :id"), # f-string safe here because col is built internally
+            {"value": value, "id": pid}
+        )
+
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")           # Capture current UTC timestamp as a string
+
+        conn.execute(                                                     # Append a new row to the history audit table
+            text("""
+                INSERT INTO history (project_id, stage_name, value, comment, updated_at)
+                VALUES (:project_id, :stage_name, :value, :comment, :updated_at)
+            """),
+            {
+                "project_id": pid,                                        # Link this entry to the correct project
+                "stage_name": STAGES[stage_index],                       # Store the human-readable stage name
+                "value":      value,                                      # The percentage value saved in this update
+                "comment":    comment,                                    # The analyst's note (may be empty string)
+                "updated_at": now,                                        # Explicit timestamp — never rely on SQL DEFAULT
+            }
+        )
+        conn.commit()                                                     # Commit both the UPDATE and the INSERT together
+
+        updated = conn.execute(                                           # Re-fetch the project to return fresh vals
+            text("SELECT * FROM projects WHERE id = :id"),
+            {"id": pid}
+        ).mappings().fetchone()
+
+    return jsonify(row_to_project(updated))                              # Return the updated project as JSON
+
+
+# ── GET /api/projects/<id>/comments ──────────────────────────────────────────
+@app.route("/api/projects/<int:pid>/comments", methods=["GET"])
+def get_comments(pid):
+    """
+    Return all history entries for a project sorted newest-first.
+    Called by the lead dashboard when the user clicks the Comments button.
+    Returns a JSON array of history items including stage_name, value, comment, updated_at.
+    """
+    with engine.connect() as conn:                                        # Open DB connection
+        project = conn.execute(                                           # Confirm the project exists before querying history
+            text("SELECT id FROM projects WHERE id = :id"),
+            {"id": pid}
+        ).fetchone()
+        if not project:                                                   # Return 404 if no such project
+            return jsonify({"error": "Project not found."}), 404
+
+        rows = conn.execute(                                              # Fetch all history rows for this project
+            text("""
+                SELECT * FROM history
+                WHERE project_id = :pid
+                ORDER BY updated_at DESC
+            """),                                                         # DESC = newest entry first (latest comment at top)
+            {"pid": pid}
+        ).mappings().all()                                                # Convert to list of dict-like mappings
+
+    return jsonify([row_to_history(r) for r in rows])                    # Serialise every row and return as JSON array
+
+
+# =============================================================================
+#  STARTUP
+# =============================================================================
+
+def patch_null_timestamps():
+    """
+    One-time migration: set updated_at on any history rows that were inserted
+    before the explicit timestamp fix (old rows may have NULL in that column).
+    Uses a fixed fallback string so these rows display cleanly instead of '—'.
+    """
+    fallback = "2026-01-01 00:00:00"                                   # Neutral placeholder for rows whose real time is unknown
+    with engine.connect() as conn:                                     # Open DB connection
+        conn.execute(                                                   # Update only the NULL rows so genuine timestamps are untouched
+            text("UPDATE history SET updated_at = :ts WHERE updated_at IS NULL OR updated_at = ''"),
+            {"ts": fallback}
+        )
+        conn.commit()                                                   # Persist the patch to disk
+
+
+if __name__ == "__main__":
+    os.makedirs(os.path.join(basedir, "instance"), exist_ok=True)  # Ensure the instance/ directory exists before db init
+    init_db()                                                        # Create tables on first run (safe to call every time)
+    patch_null_timestamps()                                          # Fix any history rows that have NULL updated_at
+    print("Dashboard API running at http://localhost:5000")          # Confirm server has started
+    print("  Analyst Panel   ->  http://localhost:5000/analyst")    # URL to share with the analyst / execution team
+    print("  Lead Dashboard  ->  http://localhost:5000/dashboard")  # URL to share with business leads / managers
+    app.run(debug=True, port=5000)                                   # Start the Flask development server on port 5000
+
